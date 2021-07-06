@@ -10,7 +10,8 @@ from .mathutil import *
 
 def psf(x, w):
 #     return 1/(np.pi*w/2)*np.exp(-2*(x**2)/w)
-    return np.sqrt(2)/np.sqrt(np.pi)/w*np.exp(-2*(x**2)/w**2)
+    # return np.sqrt(2)/np.sqrt(np.pi)/w*np.exp(-2*(x**2)/w**2)
+    return np.exp(-2*(x**2)/w**2)
 
 def box(x, R):
     return np.where(x>R, 0, 1)
@@ -33,7 +34,7 @@ def deconvolve(img, w, iters):
 def atomVal(img, mask, w = 6, iters = 20):
     return np.sum(mask*deconvolve(img, w, iters))
 
-def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True, peakParams = [10,10], output = True, coords = None):
+def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True, peakParams = [10,10], output = True, coords = None, mindist=100):
     """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
 
     if FFT:
@@ -44,7 +45,7 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
         fimgArg = np.angle(fimg)
 
         # fimgMax = ndi.maximum_filter(fimg, size = 100, mode = 'constant')
-        fMaxCoord = peak_local_max(fimgAbs, min_distance=100, threshold_rel=.1)
+        fMaxCoord = peak_local_max(fimgAbs, min_distance=mindist, threshold_rel=.1)
         # fMaxBool = peak_local_max(fimgAbs, min_distance=100, threshold_rel=.1, num_peaks = 4, indices=False)
 
         fMaxCoord = fMaxCoord[fMaxCoord[:,0]-fftN/2>-fftN/20] # Restrict to positive quadrant

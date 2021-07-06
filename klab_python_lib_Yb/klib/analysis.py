@@ -1157,7 +1157,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
         plt.title(exp.data_addr + "data_" + str(run) + ".h5")
         plt.show()
 
-
+        print('even/odd bkg peak position: '+'{:.3f}'.format(popt_all[0][1])+'/{:.3f}'.format(popt_all[1][1]))
         print('even/odd atom peak position: '+'{:.3f}'.format(popt_all[0][4])+'/{:.3f}'.format(popt_all[1][4]))
         print('even/odd bkg peak width: '+'{:.3f}'.format(abs(popt_all[0][2]))+'/{:.3f}'.format(abs(popt_all[1][2])))
         print('even/odd atom peak width: '+'{:.3f}'.format(abs(popt_all[0][5]))+'/{:.3f}'.format(abs(popt_all[1][5])))
@@ -1294,7 +1294,7 @@ def var_scan_loadprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
     for i in range(len(exp.key)):
         p = np.sum(data[i*exp.reps : (i + 1)*exp.reps])/exp.reps/len(masks)
         patom.append(p)
-        patom_err.append(np.sqrt(p/exp.reps/len(masks)))
+        patom_err.append(np.sqrt(p*(1-p)/exp.reps/len(masks)))
 
 
     if (exp.key.ndim > 1):
@@ -1416,8 +1416,8 @@ def get_loss(exp, run, masks, t, sortkey=0, crop=[0,None,0,None]):
     load = a/npair
     surv = aa/a
 
-    load_err = np.sqrt(a)/npair
-    surv_err = surv*(1-surv)
+    load_err = np.sqrt(load*(1-load)/npair)
+    surv_err = np.sqrt(surv*(1-surv)/a)
 
     print(' ')
     print('total pairs: ' + str(npair))
@@ -1459,7 +1459,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
         if a:
             p = aa/a
             surv_prob.append(p)
-            surv_prob_uncertainty.append(p*(1-p))
+            surv_prob_uncertainty.append(np.sqrt(p*(1-p)/a))
         else:
             surv_prob.append(0)
             surv_prob_uncertainty.append(0)
@@ -1503,7 +1503,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
                           np.min(surv_prob_sorted)]
                 popt, pcov = curve_fit(gaussian, key_sorted, surv_prob_sorted, p0=pguess)
 
-                print('key fit = {:.3e}'.format(popt[1]))
+                print('key fit = {:.5e}'.format(popt[1]))
 
             if fit == 'gaussian_dip':
                 pguess = [-np.max(surv_prob_sorted)+np.min(surv_prob_sorted),
@@ -1512,7 +1512,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
                           np.max(surv_prob_sorted)]
                 popt, pcov = curve_fit(gaussian, key_sorted, surv_prob_sorted, p0=pguess)
 
-                print('key fit = {:.3e}'.format(popt[1]))
+                print('key fit = {:.5e}'.format(popt[1]))
 
             if fit == 'hockey':
                 pguess = [(key_sorted[-1]+key_sorted[0])/2,
@@ -1520,7 +1520,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
                           np.max(surv_prob_sorted)]
                 popt, pcov = curve_fit(hockey, key_sorted, surv_prob_sorted, p0=pguess)
 
-                print('key fit = {:.3e}'.format(popt[0]))
+                print('key fit = {:.5e}'.format(popt[0]))
 
             key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
             fig, ax = plt.subplots(figsize=[5,4])
