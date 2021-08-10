@@ -1157,14 +1157,18 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
         plt.title(exp.data_addr + "data_" + str(run) + ".h5")
         plt.show()
 
-        print('even/odd bkg peak position: '+'{:.3f}'.format(popt_all[0][1])+'/{:.3f}'.format(popt_all[1][1]))
-        print('even/odd atom peak position: '+'{:.3f}'.format(popt_all[0][4])+'/{:.3f}'.format(popt_all[1][4]))
-        print('even/odd bkg peak width: '+'{:.3f}'.format(abs(popt_all[0][2]))+'/{:.3f}'.format(abs(popt_all[1][2])))
-        print('even/odd atom peak width: '+'{:.3f}'.format(abs(popt_all[0][5]))+'/{:.3f}'.format(abs(popt_all[1][5])))
-        print('even/odd thresholds: '+'{:.3f}'.format(threshold_all[0])+'/{:.3f}'.format(threshold_all[1]))
-        print('fitted infidelity: '+'{:.3f}'.format(infidelity*100)+' percent')
+        if (fit):
+            print('even/odd bkg peak position: '+'{:.3f}'.format(popt_all[0][1])+'/{:.3f}'.format(popt_all[1][1]))
+            print('even/odd atom peak position: '+'{:.3f}'.format(popt_all[0][4])+'/{:.3f}'.format(popt_all[1][4]))
+            print('even/odd bkg peak width: '+'{:.3f}'.format(abs(popt_all[0][2]))+'/{:.3f}'.format(abs(popt_all[1][2])))
+            print('even/odd atom peak width: '+'{:.3f}'.format(abs(popt_all[0][5]))+'/{:.3f}'.format(abs(popt_all[1][5])))
+            print('even/odd thresholds: '+'{:.3f}'.format(threshold_all[0])+'/{:.3f}'.format(threshold_all[1]))
+            print('fitted infidelity: '+'{:.3f}'.format(infidelity*100)+' percent')
 
-    return threshold_all[0], threshold_all[1], popt_all, hist_xdata_all, hist_all, min_mistake, css, infidelity
+    if (fit):
+        return threshold_all[0], threshold_all[1], popt_all, hist_xdata_all, hist_all, min_mistake, css, infidelity
+    else:
+        return threshold_all[0], threshold_all[1], hist_xdata_all, hist_all, min_mistake, css
 
 # def find_threshold_2(exp, run, roi=[12, 15, 11, 14], threshold_guess = 30, bin_number = 100):
 #     sig = exp.pics[:, roi[0]:roi[1], roi[2]:roi[3]]
@@ -1328,13 +1332,16 @@ def var_scan_loadprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
         key_sorted = np.sort(key)
 
         if fit == 'gaussian_peak':
-            pguess = [np.max(patom_sorted)-np.min(patom_sorted),
-                      key_sorted[np.argmax(patom_sorted)],
-                      (key_sorted[-1]-key_sorted[0])/3,
-                      np.min(patom_sorted)]
-            popt, pcov = curve_fit(gaussian, key_sorted, patom_sorted, p0=pguess)
+            try:
+                pguess = [np.max(patom_sorted)-np.min(patom_sorted),
+                          key_sorted[np.argmax(patom_sorted)],
+                          (key_sorted[-1]-key_sorted[0])/3,
+                          np.min(patom_sorted)]
+                popt, pcov = curve_fit(gaussian, key_sorted, patom_sorted, p0=pguess)
 
-            print('key fit = {:.3e}'.format(popt[1]))
+                print('key fit = {:.3e}'.format(popt[1]))
+            except:
+                print('fit failed')
 
         if fit == 'gaussian_dip':
             pguess = [-np.max(patom_sorted)+np.min(patom_sorted),
@@ -1521,6 +1528,17 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
                 popt, pcov = curve_fit(hockey, key_sorted, surv_prob_sorted, p0=pguess)
 
                 print('key fit = {:.5e}'.format(popt[0]))
+                ##saddgbfgb
+
+            if fit == 'triplor':
+                # triplor(x, a0, a1, a2, kc, ks, x0, dx, y0)
+                pguess = [0.2, 0.5, 0.2, 0.05, 0.05,
+                          (key_sorted[-1]+key_sorted[0])/2,
+                          0.06,0]
+                popt, pcov = curve_fit(triplor, key_sorted, surv_prob_sorted, p0=pguess)
+                print('x, a0, a1, a2, kc, ks, x0, dx, y0')
+
+                print(popt)
 
             key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
             fig, ax = plt.subplots(figsize=[5,4])
@@ -1528,6 +1546,8 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
                 plt.plot(key_fine, gaussian(key_fine, *popt), 'k-')
             if fit == 'hockey':
                 plt.plot(key_fine, hockey(key_fine, *popt), 'k-')
+            if fit == 'triplor':
+                plt.plot(key_fine, triplor(key_fine, *popt), 'k-')
             plt.errorbar(key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, color='k', marker='o', linestyle=':', alpha=0.7)
             if (type(exp.key_name) == str):
                 plt.xlabel(exp.key_name)
