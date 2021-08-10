@@ -1472,7 +1472,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
             surv_prob_uncertainty.append(0)
 
 
-    if (exp.key.ndim > 1):
+    if (np.shape(exp.key)[-1] == 2):
 
         surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key), surv_prob))), key=lambda x: [x[0], x[1]]))
         surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1]))))
@@ -1483,6 +1483,8 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
         k0max = np.max(surv_prob_sorted[:,0])
         k1min = np.min(surv_prob_sorted[:,1])
         k1max = np.max(surv_prob_sorted[:,1])
+        key0 = np.sort(np.unique(surv_prob_sorted[:,0]))
+        key1 = np.sort(np.unique(surv_prob_sorted[:,1]))
 
         fig, ax = plt.subplots(figsize=[5,4])
         im = plt.imshow(surv_prob_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
@@ -1493,6 +1495,41 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
         cbar.ax.set_ylabel('surv_prob')
         plt.title(exp.data_addr + "data_" + str(run) + ".h5")
         plt.show()
+
+    if (np.shape(exp.key)[-1] == 3):
+
+        surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key), surv_prob))), key=lambda x: [x[0], x[1], x[2]]))
+        surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,3], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))))
+        surv_prob_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key),surv_prob_uncertainty))), key=lambda x: [x[0], x[1], x[2]]))
+        surv_prob_sorted_reshape_err = np.reshape(surv_prob_uncertainty_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))))
+
+        k0min = np.min(surv_prob_sorted[:,0])
+        k0max = np.max(surv_prob_sorted[:,0])
+        k1min = np.min(surv_prob_sorted[:,1])
+        k1max = np.max(surv_prob_sorted[:,1])
+        k2min = np.min(surv_prob_sorted[:,2])
+        k2max = np.max(surv_prob_sorted[:,2])
+        key0 = np.sort(np.unique(surv_prob_sorted[:,0]))
+        key1 = np.sort(np.unique(surv_prob_sorted[:,1]))
+        key2 = np.sort(np.unique(surv_prob_sorted[:,2]))
+
+        keylengths = np.array([len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))])
+        minnumkey = np.min(keylengths)
+        minnumarg = np.argmin(keylengths)
+        # keys = np.array([key0, key1, key2])
+
+
+
+
+        # fig, ax = plt.subplots(figsize=[5,4], nrows=minnumkey)
+        # for i in range(minnumkey):
+        #     im = plt.imshow(surv_prob_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+        #                aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+        #     plt.xlabel(exp.key_name[1])
+        #     plt.ylabel(exp.key_name[0])
+        #     cbar = plt.colorbar(im)
+        #     cbar.ax.set_ylabel('surv_prob')
+        # plt.title(exp.data_addr + "data_" + str(run) + ".h5")
 
 
     else:
@@ -1519,7 +1556,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
                           np.max(surv_prob_sorted)]
                 popt, pcov = curve_fit(gaussian, key_sorted, surv_prob_sorted, p0=pguess)
 
-                print('key fit = {:.5e}'.format(popt[1]))
+                print('key fit = {:.5e} +/- {:.5e}'.format(popt[1], np.sqrt(np.diag(pcov))[1]))
 
             if fit == 'hockey':
                 pguess = [(key_sorted[-1]+key_sorted[0])/2,
@@ -1532,11 +1569,39 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
 
             if fit == 'triplor':
                 # triplor(x, a0, a1, a2, kc, ks, x0, dx, y0)
-                pguess = [0.2, 0.5, 0.2, 0.05, 0.05,
+                pguess = [0.4, 0.4, 0.4, 0.05, 0.05,
                           (key_sorted[-1]+key_sorted[0])/2,
                           0.06,0]
                 popt, pcov = curve_fit(triplor, key_sorted, surv_prob_sorted, p0=pguess)
                 print('x, a0, a1, a2, kc, ks, x0, dx, y0')
+
+                print(popt)
+
+            if fit == 'dampedCos':
+                # dampedCos(t, A, tau, f, phi, y0): A*np.exp(-t/tau)/2 * (np.cos(2*np.pi*f*t+phi)) + y0
+                pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
+                          key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
+                          (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/2]
+                popt, pcov = curve_fit(dampedCos, key_sorted, surv_prob_sorted, p0=pguess)
+                print('A, tau, f, phi, y0')
+
+                print(popt)
+
+            if fit == 'gausCos':
+                #gausCos(t, A, sig, f, phi, y0):(A/2)*np.exp(-(t/sig)**2/2) * (np.cos(2*np.pi*f*t+phi)) + y0
+                pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
+                          key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
+                          (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/2]
+                popt, pcov = curve_fit(gausCos, key_sorted, surv_prob_sorted, p0=pguess)
+                print('A, tau, f, phi, y0')
+
+                print(popt)
+
+            if fit == 'decayt':
+                # decayt(t, tau, a, y0): y0 + a*np.exp(-t/tau)
+                pguess = [key_sorted[-1]/5, np.max(surv_prob_sorted)-np.min(surv_prob_sorted), np.min(surv_prob_sorted)]
+                popt, pcov = curve_fit(decayt, key_sorted, surv_prob_sorted, p0=pguess)
+                print('t, tau, a, y0')
 
                 print(popt)
 
@@ -1548,6 +1613,12 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
                 plt.plot(key_fine, hockey(key_fine, *popt), 'k-')
             if fit == 'triplor':
                 plt.plot(key_fine, triplor(key_fine, *popt), 'k-')
+            if fit == 'dampedCos':
+                plt.plot(key_fine, dampedCos(key_fine, *popt), 'k-')
+            if fit == 'gausCos':
+                plt.plot(key_fine, gausCos(key_fine, *popt), 'k-')
+            if fit == 'decayt':
+                plt.plot(key_fine, decayt(key_fine, *popt), 'k-')
             plt.errorbar(key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, color='k', marker='o', linestyle=':', alpha=0.7)
             if (type(exp.key_name) == str):
                 plt.xlabel(exp.key_name)
@@ -1558,10 +1629,57 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
             plt.ylim(0, 1)
             plt.show()
 
-    if (exp.key.ndim > 1):
-        return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob
+    if (np.shape(exp.key)[-1] == 2):
+        return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob, key0, key1
+    if (np.shape(exp.key)[-1] == 3):
+        return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob, key0, key1, key2
     else:
         return key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, popt, pcov
+
+def get_site_survival(exp, run, masks, t, crop=[0,None,0,None]):
+    data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+    loaddata = data[::2]
+    survdata = data[1::2]
+
+    surv_probs = []
+    surv_prob_uncertaintys = []
+
+    key = exp.key
+
+    for i in range(len(key)):
+        surv_prob = []
+        surv_prob_uncertainty = []
+        for m in range(len(masks)):
+            aa = 0
+            a = 0
+            for j in range(exp.reps):
+                atom1 = loaddata[i*exp.reps +j][m]
+                atom2 = survdata[i*exp.reps +j][m]
+                if (atom1 and atom2):
+                    aa += 1
+                if (atom1):
+                    a += 1
+            if np.sum(a):
+                p = np.sum(aa)/np.sum(a)
+                surv_prob.append(p)
+                if np.sum(aa):
+                    surv_prob_uncertainty.append(np.sqrt(p*(1-p)/a))
+                else:
+                    surv_prob_uncertainty.append(0)
+            else:
+                surv_prob.append(0)
+                surv_prob_uncertainty.append(0)
+
+        surv_probs.append(surv_prob)
+        surv_prob_uncertaintys.append(surv_prob_uncertainty)
+
+    key_sorted = np.sort(key)
+    surv_probs_sorted = np.array(surv_probs)[np.argsort(key),:]
+    surv_prob_uncertaintys_sorted = np.array(surv_prob_uncertaintys)[np.argsort(key),:]
+
+
+
+    return key_sorted, surv_probs_sorted, surv_prob_uncertaintys_sorted
 
 # picture_num = 0,1 for getting counts in first or second image
 def getCountsPerAtom(exp, run, masks, picture_num, threshold, sortkey=0, crop=[0,None,0,None]):

@@ -15,7 +15,7 @@ def decay(t, gamma, a, y0):
 
 def decayt(t, tau, a, y0):
     """Exponential decay [tau, amp, offset]"""
-    return y0 + a*np.exp(-t/tau)
+
 
 def radial_profile(data, center):
     """Returns radial average of matrix about user-defined center."""
