@@ -1105,41 +1105,51 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
         hist_xdata_all.append(hist_xdata)
         hist_all.append(hist)
 
+        fit_worked = True
         if (fit):
             idx_guess = np.abs(hist_xdata - threshold_guess).argmin()
+            # print(idx_guess)
 
             pguess = [np.max(hist[:idx_guess])-np.min(hist[:idx_guess]),
                       hist_xdata[np.argmax(hist[:idx_guess])],
-                      (hist_xdata[idx_guess]-hist_xdata[0])/3,
+                      (hist_xdata[idx_guess]-hist_xdata[0])/5,
                       np.max(hist[idx_guess:])-np.min(hist[idx_guess:]),
-                      hist_xdata[np.argmax(hist[idx_guess:])],
-                      (hist_xdata[-1]-hist_xdata[idx_guess])/3]
-            popt, pcov = curve_fit(double_gaussian, hist_xdata, hist, p0=pguess)
-            popt_all.append(popt)
+                      hist_xdata[idx_guess+np.argmax(hist[idx_guess:])],
+                      (hist_xdata[-1]-hist_xdata[idx_guess])/5]
+            try:
+                popt, pcov = curve_fit(double_gaussian, hist_xdata, hist, p0=pguess) #p[0] * np.exp( -((x- p[1])**2) / (2*(p[2]**2)) ) + p[3] * np.exp( -((x - p[4])**2) / (2*(p[5]**2)) )
+                popt_all.append(popt)
 
-            hist_xdata_fine = np.linspace(hist_xdata[0], hist_xdata[-1], 200, endpoint=True)
+                hist_xdata_fine = np.linspace(hist_xdata[0], hist_xdata[-1], 200, endpoint=True)
 
-            mistake_arr = []
+                mistake_arr = []
 
-            t_arr = np.linspace(popt[1], popt[4], 100)
-            for t in t_arr:
+                t_arr = np.linspace(popt[1], popt[4], 100)
+                for t in t_arr:
 
-                atom_mistake = erfc(t, popt[3], popt[4], popt[5])
-                void_mistake = erfc(t, popt[0], popt[1], popt[2])
-                mistake = void_mistake + atom_mistake
-                mistake_arr.append(mistake)
+                    atom_mistake = erfc(t, popt[3], popt[4], popt[5])
+                    void_mistake = erfc(t, popt[0], popt[1], popt[2])
+                    mistake = void_mistake + atom_mistake
+                    mistake_arr.append(mistake)
 
-            threshold = t_arr[np.argmin(mistake_arr)]
-            min_mistake = np.min(mistake_arr)
+                threshold = t_arr[np.argmin(mistake_arr)]
+                min_mistake = np.min(mistake_arr)
 
-            if num == 0:
-                infidelity = min_mistake/(popt[0]*popt[2]*np.sqrt(2*np.pi)+popt[3]*popt[5]*np.sqrt(2*np.pi))
+                if num == 0:
+                    infidelity = min_mistake/(popt[0]*popt[2]*np.sqrt(2*np.pi)+popt[3]*popt[5]*np.sqrt(2*np.pi))
+
+            except:
+                print('threshold fit failed, using threshold guess')
+                fit_worked = False
+                threshold = threshold_guess
+                min_mistake = 1000
 
         else:
             threshold = threshold_guess
             min_mistake = 1000
 
         threshold_all.append(threshold)
+
 
     if output == True:
         fig, ax = plt.subplots(figsize=[6,4])
@@ -1148,8 +1158,8 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
         if (surv):
             plt.plot(hist_xdata_all[1], hist_all[1], alpha=0.5, drawstyle='steps', color='k', zorder = 0)
             plt.plot([threshold_all[1], threshold_all[1]], [np.min(hist_all[1]), np.max(hist_all[1])], 'k--', alpha=0.5, label='odd', zorder = 0)
-        if (fit and not surv):
-           plt.plot(hist_xdata_fine, double_gaussian(hist_xdata_fine, *popt), 'b-', alpha=0.4, zorder = 0)
+        # if (fit and not surv):
+        #    plt.plot(hist_xdata_fine, double_gaussian(hist_xdata_fine, *popt), 'b-', alpha=0.4, zorder = 0)
         plt.xlabel('Counts collected')
         plt.ylabel('Events')
         plt.ylim(0, )
@@ -1157,7 +1167,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
         plt.title(exp.data_addr + "data_" + str(run) + ".h5")
         plt.show()
 
-        if (fit):
+        if (fit and fit_worked):
             print('even/odd bkg peak position: '+'{:.3f}'.format(popt_all[0][1])+'/{:.3f}'.format(popt_all[1][1]))
             print('even/odd atom peak position: '+'{:.3f}'.format(popt_all[0][4])+'/{:.3f}'.format(popt_all[1][4]))
             print('even/odd bkg peak width: '+'{:.3f}'.format(abs(popt_all[0][2]))+'/{:.3f}'.format(abs(popt_all[1][2])))
@@ -1165,7 +1175,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
             print('even/odd thresholds: '+'{:.3f}'.format(threshold_all[0])+'/{:.3f}'.format(threshold_all[1]))
             print('fitted infidelity: '+'{:.3f}'.format(infidelity*100)+' percent')
 
-    if (fit):
+    if (fit and fit_worked):
         return threshold_all[0], threshold_all[1], popt_all, hist_xdata_all, hist_all, min_mistake, css, infidelity
     else:
         return threshold_all[0], threshold_all[1], hist_xdata_all, hist_all, min_mistake, css
@@ -1440,7 +1450,7 @@ def get_loss(exp, run, masks, t, sortkey=0, crop=[0,None,0,None]):
     return va/npair
 
 
-def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None,0,None]):
+def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=[], crop=[0,None,0,None], pguess=None, multiScan=False):
 
     data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
     loaddata = data[::2]
@@ -1450,9 +1460,15 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
     surv_prob_uncertainty = []
     popt, pcov = [], []
 
-    key = exp.key
+    if multiScan == True:
+        key = exp.key[:, sortkey]
+        key_name = [exp.key_name[i] for i in sortkey]
+    else:
+        key = exp.key
+        key_name = exp.key_name
 
-    for i in range(len(key)):
+
+    for i in range(len(exp.key)):
         aa = 0
         a = 0
         for j in range(exp.reps):
@@ -1471,13 +1487,13 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
             surv_prob.append(0)
             surv_prob_uncertainty.append(0)
 
+    #if (np.shape(key)[-1] == 2):
+    if (np.shape(key)[-1] == 2):
 
-    if (np.shape(exp.key)[-1] == 2):
-
-        surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key), surv_prob))), key=lambda x: [x[0], x[1]]))
-        surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1]))))
-        surv_prob_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key),surv_prob_uncertainty))), key=lambda x: [x[0], x[1]]))
-        surv_prob_sorted_reshape_err = np.reshape(surv_prob_uncertainty_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1]))))
+        surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key), surv_prob))), key=lambda x: [x[0], x[1]]))
+        surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+        surv_prob_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key),surv_prob_uncertainty))), key=lambda x: [x[0], x[1]]))
+        surv_prob_sorted_reshape_err = np.reshape(surv_prob_uncertainty_sorted[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
 
         k0min = np.min(surv_prob_sorted[:,0])
         k0max = np.max(surv_prob_sorted[:,0])
@@ -1489,19 +1505,19 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
         fig, ax = plt.subplots(figsize=[5,4])
         im = plt.imshow(surv_prob_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
                    aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
-        plt.xlabel(exp.key_name[1])
-        plt.ylabel(exp.key_name[0])
+        plt.xlabel(key_name[1])
+        plt.ylabel(key_name[0])
         cbar = plt.colorbar(im)
         cbar.ax.set_ylabel('surv_prob')
         plt.title(exp.data_addr + "data_" + str(run) + ".h5")
         plt.show()
 
-    if (np.shape(exp.key)[-1] == 3):
+    if (np.shape(key)[-1] == 3):
 
-        surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key), surv_prob))), key=lambda x: [x[0], x[1], x[2]]))
-        surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,3], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))))
-        surv_prob_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key),surv_prob_uncertainty))), key=lambda x: [x[0], x[1], x[2]]))
-        surv_prob_sorted_reshape_err = np.reshape(surv_prob_uncertainty_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))))
+        surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key), surv_prob))), key=lambda x: [x[0], x[1], x[2]]))
+        surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,3], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1])), len(np.unique(key[:, 2]))))
+        surv_prob_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key),surv_prob_uncertainty))), key=lambda x: [x[0], x[1], x[2]]))
+        surv_prob_sorted_reshape_err = np.reshape(surv_prob_uncertainty_sorted[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1])), len(np.unique(key[:, 2]))))
 
         k0min = np.min(surv_prob_sorted[:,0])
         k0max = np.max(surv_prob_sorted[:,0])
@@ -1513,7 +1529,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
         key1 = np.sort(np.unique(surv_prob_sorted[:,1]))
         key2 = np.sort(np.unique(surv_prob_sorted[:,2]))
 
-        keylengths = np.array([len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))])
+        keylengths = np.array([len(np.unique(key[:, 0])), len(np.unique(key[:, 1])), len(np.unique(key[:, 2]))])
         minnumkey = np.min(keylengths)
         minnumarg = np.argmin(keylengths)
         # keys = np.array([key0, key1, key2])
@@ -1569,31 +1585,82 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
 
             if fit == 'triplor':
                 # triplor(x, a0, a1, a2, kc, ks, x0, dx, y0)
-                pguess = [0.4, 0.4, 0.4, 0.05, 0.05,
+                if (pguess == None):
+                    pguess = [0.4, 0.4,0.4, 0.01, 0.01,
                           (key_sorted[-1]+key_sorted[0])/2,
-                          0.06,0]
+                          0.07,0]
                 popt, pcov = curve_fit(triplor, key_sorted, surv_prob_sorted, p0=pguess)
-                print('x, a0, a1, a2, kc, ks, x0, dx, y0')
+                print('a0, a1, a2, kc, ks, x0, dx, y0')
+
+                print(popt)
+
+                print('red sideband freq:', popt[5]+abs(popt[6]))
+
+            if fit == 'sinc2':
+                # A*np.sinc(x-x0) + y0
+                pguess = [(key_sorted[-1]+key_sorted[0])/2, 0.8, 0, 0.01]
+                popt, pcov = curve_fit(sinc2, key_sorted, surv_prob_sorted, p0=pguess)
+                print('x0, a0, y0, k0')
+
+                print(popt)
+
+            if fit == 'twosinc2':
+                # A*np.sinc(x-x0) + y0
+                if (pguess == None):
+                    pguess = [(key_sorted[-1]+key_sorted[0])/3,2*(key_sorted[-1]+key_sorted[0])/3, 0.8, 0.8, 0, 0.01, 0.01]
+                popt, pcov = curve_fit(twosinc2, key_sorted, surv_prob_sorted, p0=pguess)
+                print('x0, x1, a0, a1, y0, k0, k1')
+
+                print(popt)
+
+            if fit == 'lor':
+                # triplor(x, a0, a1, a2, kc, ks, x0, dx, y0)
+                pguess = [0.4, 0.05,
+                          (key_sorted[-1]+key_sorted[0])/2
+                        ]
+                popt, pcov = curve_fit(lor, key_sorted, surv_prob_sorted, p0=pguess)
+                print('a, k, x0')
+
+                print(popt)
+
+            if fit == 'twolor':
+                # twolor(x, a0, a1, k0, k1, x0, x1, y0):
+                if (pguess == None):
+                    pguess = [0.4, 0.04, 0.05, 0.05,
+                              (key_sorted[-1]+key_sorted[0])/3, (key_sorted[-1]+key_sorted[0])*2/3, 0
+                            ]
+                popt, pcov = curve_fit(twolor, key_sorted, surv_prob_sorted, p0=pguess)
+                print('a0, a1, k0, k1, x0, x1, y0')
 
                 print(popt)
 
             if fit == 'dampedCos':
                 # dampedCos(t, A, tau, f, phi, y0): A*np.exp(-t/tau)/2 * (np.cos(2*np.pi*f*t+phi)) + y0
-                pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
-                          key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
-                          (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/2]
+                if (pguess == None):
+                    pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
+                              key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
+                              0]
                 popt, pcov = curve_fit(dampedCos, key_sorted, surv_prob_sorted, p0=pguess)
-                print('A, tau, f, phi, y0')
-
-                print(popt)
+                print('f, tau: %.4e, %.4e' %(popt[2], popt[1]))
+				#print('A, tau, f, phi, y0')#print(popt)
 
             if fit == 'gausCos':
                 #gausCos(t, A, sig, f, phi, y0):(A/2)*np.exp(-(t/sig)**2/2) * (np.cos(2*np.pi*f*t+phi)) + y0
-                pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
-                          key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
-                          (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/2]
+                if (pguess == None):
+                    pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
+                              key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
+                              (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/2]
                 popt, pcov = curve_fit(gausCos, key_sorted, surv_prob_sorted, p0=pguess)
-                print('A, tau, f, phi, y0')
+                sig = np.sqrt(2)*popt[1]
+                print(' A, sig, f, phi, y0')
+
+                print(sig, popt)
+
+            if fit == 'Thermal_dephase':
+                #Thermal_dephase(t, nbar, Omega0, A, eta=0.33)
+                pguess = [1, 4/(key_sorted[-1]), 1]
+                popt, pcov = curve_fit(Thermal_dephase, key_sorted, surv_prob_sorted, p0=pguess)
+                print('nbar, Omega0, A, eta=0.33')
 
                 print(popt)
 
@@ -1605,33 +1672,54 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
 
                 print(popt)
 
+            if fit == 'decayt0':
+                # decayt(t, tau, a, y0): y0 + a*np.exp(-t/tau)
+                pguess = [key_sorted[-1]/5, np.max(surv_prob_sorted)-np.min(surv_prob_sorted)]
+                popt, pcov = curve_fit(decayt0, key_sorted, surv_prob_sorted, p0=pguess)
+                print('t, tau, a')
+
+                print(popt)
+
             key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
-            fig, ax = plt.subplots(figsize=[5,4])
+            fig, ax = plt.subplots()
             if fit == 'gaussian_peak' or fit == 'gaussian_dip':
                 plt.plot(key_fine, gaussian(key_fine, *popt), 'k-')
             if fit == 'hockey':
                 plt.plot(key_fine, hockey(key_fine, *popt), 'k-')
             if fit == 'triplor':
                 plt.plot(key_fine, triplor(key_fine, *popt), 'k-')
+            if fit == 'lor':
+                plt.plot(key_fine, lor(key_fine, *popt), 'k-')
+            if fit == 'twolor':
+                plt.plot(key_fine, twolor(key_fine, *popt), 'k-')
+            if fit == 'sinc2':
+                plt.plot(key_fine, sinc2(key_fine, *popt), 'k-')
+            if fit == 'twosinc2':
+                plt.plot(key_fine, twosinc2(key_fine, *popt), 'k-')
             if fit == 'dampedCos':
                 plt.plot(key_fine, dampedCos(key_fine, *popt), 'k-')
             if fit == 'gausCos':
                 plt.plot(key_fine, gausCos(key_fine, *popt), 'k-')
+            if fit == 'Thermal_dephase':
+                plt.plot(key_fine, Thermal_dephase(key_fine, *popt), 'k-')
             if fit == 'decayt':
                 plt.plot(key_fine, decayt(key_fine, *popt), 'k-')
+            if fit == 'decayt0':
+                plt.plot(key_fine, decayt0(key_fine, *popt), 'k-')
+
             plt.errorbar(key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, color='k', marker='o', linestyle=':', alpha=0.7)
-            if (type(exp.key_name) == str):
-                plt.xlabel(exp.key_name)
-            else:
-                plt.xlabel(exp.key_name[sortkey])
+            #if (type(key_name) == str):
+            plt.xlabel(key_name)
+            #else:
+            #    plt.xlabel(key_name[sortkey])
             plt.ylabel('surv prob')
             plt.title(exp.data_addr + "data_" + str(run) + ".h5")
             plt.ylim(0, 1)
             plt.show()
 
-    if (np.shape(exp.key)[-1] == 2):
+    if (np.shape(key)[-1] == 2):
         return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob, key0, key1
-    if (np.shape(exp.key)[-1] == 3):
+    if (np.shape(key)[-1] == 3):
         return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob, key0, key1, key2
     else:
         return key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, popt, pcov

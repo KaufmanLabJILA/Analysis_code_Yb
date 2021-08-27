@@ -15,7 +15,11 @@ def decay(t, gamma, a, y0):
 
 def decayt(t, tau, a, y0):
     """Exponential decay [tau, amp, offset]"""
+    return y0 + a*np.exp(-t/tau)
 
+def decayt0(t, tau, a):
+    """Exponential decay [tau, amp, offset]"""
+    return a*np.exp(-t/tau)
 
 def radial_profile(data, center):
     """Returns radial average of matrix about user-defined center."""
@@ -68,6 +72,12 @@ def expfit(t, A, tau):
 
 def cos(t, f, A, phi, y0):
     return A*np.cos(2*np.pi*f*t+phi) + y0
+
+def sinc2(x, x0, a0, y0, k0):
+    return a0*np.sinc((x-x0)/k0)**2 + y0
+
+def twosinc2(x, x0, x1, a0, a1, y0, k0, k1):
+    return a0*np.sinc((x-x0)/k0)**2 + a1*np.sinc((x-x1)/k1)**2 + y0
 
 def cosFit(keyVals, dat, n = 0, ic = False):
     """Cosine fit. Parameter order: [f. A, phi, y0]"""
@@ -322,6 +332,19 @@ def gausfit(keyVals, dat, y_offset=False, negative=False, n=0, guess = []):
 #     df
 
     return gauss_params, perr
+
+def Omega(n,m,Omega0,eta):
+    s = max(n,m)-min(n,m)
+    Omega = Omega0*np.exp(-eta**2/2)*eta**s*np.sqrt(math.factorial(max(n,m))/math.factorial(min(n,m)))*scipy.special.genlaguerre(min(n,m),s)(eta**2)
+    return Omega
+
+def Thermal_dephase(t, nbar, Omega0, A, eta=0.33):
+    P = 0
+    for n in range(10):
+        Pn = nbar**n/(1+nbar)**(n+1)
+        P += A*Pn/2*(1-np.cos(Omega(n,n,Omega0,eta)*t))
+    return P
+
 
 def gauss2d(xy, amp, x0, y0, theta, sig_x, sig_y):
     """Math: 2D Gaussian"""

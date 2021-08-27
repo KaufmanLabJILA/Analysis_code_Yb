@@ -10,7 +10,7 @@ from .mathutil import *
 
 # photons per pixel count ad gain = 40 dB
 mako2Dcal = 0.61 #
-mako3Dcal = 1.38 # SN 536973476
+mako3Dcal = 3.638 #(1.38 was for the old imaging system) # SN 536973476
 
 def loadBMPs(path, nameFormat):
     names = arr(os.listdir(path))
@@ -22,7 +22,7 @@ def loadBMPs(path, nameFormat):
     for name in names:
         img  = arr(Image.open(path+name))
         imgs.append(img)
-    
+
     return imgs
 
 def sortImgs(exp, imgs):
@@ -145,7 +145,7 @@ def GetMakoPhase(fp,rotangle=None,sigma=3,plot=False):
         ### Extract fringe signal, fit to cosine ###
         #print(x0, y0, w)
         fringes = np.mean(hpfimg[int(y0)-50:int(y0)+50,int(x0)-50:int(x0)+50],axis=1)
-        xs = (range(np.shape(hpfimg)[0])-y0)[int(y0)-50:int(y0)+50] #Reference fringes to center of Gaussian fit, in units of the waist size. 
+        xs = (range(np.shape(hpfimg)[0])-y0)[int(y0)-50:int(y0)+50] #Reference fringes to center of Gaussian fit, in units of the waist size.
         xdense = np.linspace(xs[0],xs[-1],500)
         f_px = np.linalg.norm(((fMaxCoord[0,0]-fMaxCoord[1,0])/np.shape(fimg)[0]/2.0,(fMaxCoord[0,1]-fMaxCoord[1,1])/np.shape(fimg)[0]/2.0)) #frequency in pixels from FFT
         f = f_px #*w #NOT frequency in units of the waist size.
