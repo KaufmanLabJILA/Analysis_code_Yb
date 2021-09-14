@@ -1091,11 +1091,15 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
         cut = 10
         bkg = (np.mean(exp.pics[:, :cut, :-cut]) + np.mean(exp.pics[:, :-cut, -cut:]) + np.mean(exp.pics[:, -cut:, cut:]) + np.mean(exp.pics[:, cut:, :cut]))/4
 
-        for m in masks:
-            sig = exp.pics[num::2, crop[0]:crop[1], crop[2]:crop[3]]
-            diff = sig-bkg #[np.subtract(sig[i], bkg) for i in range(len(sig))]
-            sum_masked = [np.sum(d) for d in diff*m]
-            [cs.append(c) for c in sum_masked]
+        sig = exp.pics[num::2, crop[0]:crop[1], crop[2]:crop[3]]
+        diff = sig-bkg #[np.subtract(sig[i], bkg) for i in range(len(sig))]
+
+        cs = np.array(list(map(lambda image:
+                                list(map(lambda mask:
+                                         np.sum(mask*image),
+                                         masks)),
+                                diff)))
+        cs = cs.flatten()
 
         css.append(cs)
 
@@ -1139,8 +1143,8 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
                 # print(mistake_arr)
 
                 if num == 0:
-                    infidelity = min_mistake/(popt[0]*popt[2]*np.sqrt(2*np.pi)+popt[3]*popt[5]*np.sqrt(2*np.pi))
-                    # infidelity = min_mistake/
+                    # infidelity = min_mistake/(popt[0]*popt[2]*np.sqrt(2*np.pi)+popt[3]*popt[5]*np.sqrt(2*np.pi))
+                    infidelity = min_mistake/(exp.reps*len(masks))
 
             except:
                 print('threshold fit failed, using threshold guess')
@@ -1267,21 +1271,14 @@ def get_binarized(exp, run, masks, threshold=30, crop=[0,None,0,None]):
     sig = exp.pics[:, crop[0]:crop[1], crop[2]:crop[3]]
     diff = [np.subtract(sig[i], bkg) for i in range(len(sig))]
 
-    start = time.time()
-    for m in masks:
-        cs = [np.sum(d) for d in diff*m]
-        cs_arr.append(cs)
-    stop = time.time()
-    print("masked counts time = {:.3e} sec".format(stop-start))
+    roisums = np.array(list(map(lambda image:
+                            list(map(lambda mask:
+                                     np.sum(mask*image),
+                                     masks)),
+                            diff)))
+    binarized = np.clip(roisums, threshold, threshold+1) - threshold
 
-    binarized_images = []
-    for cs in cs_arr:
-        binarized_atoms = []
-        for c in cs:
-            binarized_atoms.append(c > threshold)
-        binarized_images.append(np.array(binarized_atoms, dtype=int))
-
-    return np.transpose(binarized_images)
+    return binarized
 
 def get_masks(imgc, x0=21, y0=14, dx=7, dy=11, N=[4,4], r=2):
     x = np.arange(len(imgc[0]))
