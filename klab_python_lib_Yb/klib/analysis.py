@@ -1058,9 +1058,9 @@ def double_gaussian(x, *p):
 
 def erfc(x, amp, x0, sigma):
     if x < x0:
-        return amp/2 * (1 + erf((x-x0)/np.sqrt(2)/np.abs(sigma)))
+        return amp * np.sqrt(np.pi*(sigma**2)/2) * (1 + erf((x-x0)/np.sqrt(2)/np.abs(sigma)))
     if x >= x0:
-        return amp/2 * (1 - erf((x-x0)/np.sqrt(2)/np.abs(sigma)))
+        return amp * np.sqrt(np.pi*(sigma**2)/2) * (1 - erf((x-x0)/np.sqrt(2)/np.abs(sigma)))
 
 def hockey(x_arr, x0, rate, offset):
     y_arr =[]
@@ -1132,11 +1132,15 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
                     mistake = void_mistake + atom_mistake
                     mistake_arr.append(mistake)
 
+
                 threshold = t_arr[np.argmin(mistake_arr)]
                 min_mistake = np.min(mistake_arr)
+                # print(np.argmin(mistake_arr))
+                # print(mistake_arr)
 
                 if num == 0:
                     infidelity = min_mistake/(popt[0]*popt[2]*np.sqrt(2*np.pi)+popt[3]*popt[5]*np.sqrt(2*np.pi))
+                    # infidelity = min_mistake/
 
             except:
                 print('threshold fit failed, using threshold guess')
@@ -1176,7 +1180,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
             print('fitted infidelity: '+'{:.3f}'.format(infidelity*100)+' percent')
 
     if (fit and fit_worked):
-        return threshold_all[0], threshold_all[1], popt_all, hist_xdata_all, hist_all, min_mistake, css, infidelity
+        return threshold_all[0], threshold_all[1], popt_all, hist_xdata_all, hist_all, min_mistake, css, infidelity, popt_all[0]
     else:
         return threshold_all[0], threshold_all[1], hist_xdata_all, hist_all, min_mistake, css
 
@@ -1260,11 +1264,15 @@ def get_binarized(exp, run, masks, threshold=30, crop=[0,None,0,None]):
     cut = 10
     bkg = (np.mean(exp.pics[:, :cut, :-cut]) + np.mean(exp.pics[:, :-cut, -cut:]) + np.mean(exp.pics[:, -cut:, cut:]) + np.mean(exp.pics[:, cut:, :cut]))/4
 
+    sig = exp.pics[:, crop[0]:crop[1], crop[2]:crop[3]]
+    diff = [np.subtract(sig[i], bkg) for i in range(len(sig))]
+
+    start = time.time()
     for m in masks:
-        sig = exp.pics[:, crop[0]:crop[1], crop[2]:crop[3]]
-        diff = [np.subtract(sig[i], bkg) for i in range(len(sig))]
         cs = [np.sum(d) for d in diff*m]
         cs_arr.append(cs)
+    stop = time.time()
+    print("masked counts time = {:.3e} sec".format(stop-start))
 
     binarized_images = []
     for cs in cs_arr:
@@ -1293,7 +1301,7 @@ def get_masks(imgc, x0=21, y0=14, dx=7, dy=11, N=[4,4], r=2):
     plt.imshow(imgcmask)
     return masks
 
-def var_scan_loadprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None,0,None]):
+def var_scan_loadprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None,0,None], fullscale=True):
 
     data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
     data = data[::2]
@@ -1450,9 +1458,10 @@ def get_loss(exp, run, masks, t, sortkey=0, crop=[0,None,0,None]):
     return va/npair
 
 
-def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=[], crop=[0,None,0,None], pguess=None, multiScan=False):
+def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=[], crop=[0,None,0,None], pguess=None, multiScan=False, fullscale=True):
 
     data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+
     loaddata = data[::2]
     survdata = data[1::2]
 
@@ -1503,8 +1512,12 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=[], crop=[0,Non
         key1 = np.sort(np.unique(surv_prob_sorted[:,1]))
 
         fig, ax = plt.subplots(figsize=[5,4])
-        im = plt.imshow(surv_prob_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
-                   aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+        if (fullscale==True):
+            im = plt.imshow(surv_prob_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+                       aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+        else:
+            im = plt.imshow(surv_prob_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+                       aspect=(k1max - k1min)/(k0max - k0min), origin="lower")
         plt.xlabel(key_name[1])
         plt.ylabel(key_name[0])
         cbar = plt.colorbar(im)
@@ -1765,9 +1778,49 @@ def get_site_survival(exp, run, masks, t, crop=[0,None,0,None]):
     surv_probs_sorted = np.array(surv_probs)[np.argsort(key),:]
     surv_prob_uncertaintys_sorted = np.array(surv_prob_uncertaintys)[np.argsort(key),:]
 
+    return surv_probs_sorted
 
 
-    return key_sorted, surv_probs_sorted, surv_prob_uncertaintys_sorted
+def get_site_load(exp, run, masks, t, crop=[0,None,0,None]):
+    data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+    loaddata = data[::2]
+
+    load_probs = []
+    load_prob_uncertaintys = []
+
+    key = exp.key
+
+    for i in range(len(key)):
+        load_prob = []
+        load_prob_uncertainty = []
+        for m in range(len(masks)):
+            a = 0
+            for j in range(exp.reps):
+                atom1 = loaddata[i*exp.reps +j][m]
+                if (atom1):
+                    a += 1
+            if np.sum(a):
+                p = np.sum(a)/exp.reps
+                load_prob.append(p)
+                if np.sum(a):
+                    load_prob_uncertainty.append(np.sqrt(p*(1-p)/exp.reps))
+                else:
+                    load_prob_uncertainty.append(0)
+            else:
+                load_prob.append(0)
+                load_prob_uncertainty.append(0)
+
+        load_probs.append(load_prob)
+        load_prob_uncertaintys.append(load_prob_uncertainty)
+
+    key_sorted = np.sort(key)
+    load_probs_sorted = np.array(load_probs)[np.argsort(key),:]
+    load_prob_uncertaintys_sorted = np.array(load_prob_uncertaintys)[np.argsort(key),:]
+
+
+
+
+    return key_sorted, load_probs_sorted, load_prob_uncertaintys_sorted
 
 # picture_num = 0,1 for getting counts in first or second image
 def getCountsPerAtom(exp, run, masks, picture_num, threshold, sortkey=0, crop=[0,None,0,None]):

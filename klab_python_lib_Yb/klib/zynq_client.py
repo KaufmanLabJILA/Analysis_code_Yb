@@ -21,8 +21,17 @@ class zynq_tcp_client:
     def triggerGigamoogWithTweezersOn(self):
         try:
             self.sendMessage(b'DIOseq_2', self.connectByteLen)
-            self.sendMessage(b't000186A0_b0000000000000180', self.dioByteLen)
-            self.sendMessage(b't000196A0_b0000000000000100', self.dioByteLen)
+            self.sendMessage(b't000186A0_b0000000000300180', self.dioByteLen)
+            self.sendMessage(b't000196A0_b0000000000300100', self.dioByteLen)
+            self.sendMessage(b'end_0', self.connectByteLen)
+            self.sendMessage(b'trigger', self.connectByteLen)
+        except:
+            print('write failed')
+
+    def turnOffTTLs(self):
+        try:
+            self.sendMessage(b'DIOseq_1', self.connectByteLen)
+            self.sendMessage(b't000186A0_b0000000000000000', self.dioByteLen)
             self.sendMessage(b'end_0', self.connectByteLen)
             self.sendMessage(b'trigger', self.connectByteLen)
         except:
