@@ -1539,7 +1539,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
             plt.show()
 
     if (exp.key.ndim > 1):
-        return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob
+        return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob, [k1min, k1max, k0min, k0max], (k1max - k1min)/(k0max - k0min)
     else:
         return key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, popt, pcov
 
