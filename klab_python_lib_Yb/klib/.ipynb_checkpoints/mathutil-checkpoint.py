@@ -15,7 +15,7 @@ def decay(t, gamma, a, y0):
 
 def decayt(t, tau, a, y0):
     """Exponential decay [tau, amp, offset]"""
-    return y0 + a*np.exp(-t/tau)
+
 
 def radial_profile(data, center):
     """Returns radial average of matrix about user-defined center."""
@@ -74,7 +74,7 @@ def cosFit(keyVals, dat, n = 0, ic = False):
     """Can select nth color from default matplotlib color cycle."""
     xdat=arr(keyVals)
     ydat=arr(dat)
-    
+
     if not ic:
         ymin = np.min(ydat)
         ymax = np.max(ydat)
@@ -83,14 +83,14 @@ def cosFit(keyVals, dat, n = 0, ic = False):
         f = .1/(xdat[1]-xdat[0])
         phi = np.pi
         y0 = np.mean(ydat)
-    
+
         guess = [f, A, phi, y0]
     else:
         guess = ic
-        
+
 #     print(guess)
     params, uncert = curve_fit(cos, xdat, ydat, p0=guess, maxfev=999999)
-    
+
 #     cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 #     plt.plot(xdat, cos(xdat, *params), "-", color=cycle[n])
     perr = np.sqrt(np.diag(uncert))
@@ -101,7 +101,7 @@ def cosFitF(keyVals, dat, f, n = 0, ic = False, bd = False):
     """Can select nth color from default matplotlib color cycle."""
     xdat=arr(keyVals)
     ydat=arr(dat)
-    
+
     if not ic:
         ymin = np.min(ydat)
         ymax = np.max(ydat)
@@ -110,21 +110,21 @@ def cosFitF(keyVals, dat, f, n = 0, ic = False, bd = False):
 #         f = 1/(xdat[1]-xdat[0])
         phi = 0
         y0 = np.mean(ydat)
-    
+
         guess = [A, phi, y0]
     else:
         guess = ic
-        
+
     if not bd:
         bound_lower = [0, -1.5*np.pi, -100]
         bound_upper = [1000, 1.5*np.pi, 100]
     else:
         bound_lower = bd[0]
         bound_upper = bd[1]
-        
+
 #     print(guess,bound_lower,bound_upper)
     params, uncert = curve_fit(lambda x, amp, phase, y: cos(x, f, amp, phase, y), xdat, ydat, p0=guess, bounds = (bound_lower, bound_upper), maxfev = 9999)
-    
+
 #     cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 #     plt.plot(xdat, cos(xdat, f, *params), "-", color=cycle[n])
     perr = np.sqrt(np.diag(uncert))
@@ -135,28 +135,28 @@ def cosFitFA(keyVals, dat, f, A, n = 0, ic = False, bd = False):
     """Can select nth color from default matplotlib color cycle."""
     xdat=arr(keyVals)
     ydat=arr(dat)
-    
+
     if not ic:
         ymin = np.min(ydat)
         ymax = np.max(ydat)
 #         f = 1/(xdat[1]-xdat[0])
         phi = 0
         y0 = np.mean(ydat)
-    
+
         guess = [phi, y0]
     else:
         guess = ic
-        
+
     if not bd:
         bound_lower = [-1.5*np.pi, -100]
         bound_upper = [1.5*np.pi, 100]
     else:
         bound_lower = bd[0]
         bound_upper = bd[1]
-        
+
 #     print(guess,bound_lower,bound_upper)
     params, uncert = curve_fit(lambda x, phase, y: cos(x, f, A, phase, y), xdat, ydat, p0=guess, bounds = (bound_lower, bound_upper), maxfev = 9999)
-    
+
 #     cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
 #     plt.plot(xdat, cos(xdat, f, *params), "-", color=cycle[n])
     perr = np.sqrt(np.diag(uncert))
@@ -173,7 +173,7 @@ def dampedCosFit(keyVals, dat, n = 0, ic = False, plotOut = True):
     """Can select nth color from default matplotlib color cycle."""
     xdat=arr(keyVals)
     ydat=arr(dat)
-    
+
     if not ic:
         ymin = np.min(ydat)
         ymax = np.max(ydat)
@@ -183,14 +183,14 @@ def dampedCosFit(keyVals, dat, n = 0, ic = False, plotOut = True):
         f = 1/(xdat[1]-xdat[0])
         phi = 0
         y0 = np.mean(ydat)
-    
+
         guess = [A, tau, f, phi, y0]
     else:
         guess = ic
-        
+
 #     print(guess)
     params, uncert = curve_fit(dampedCos, xdat, ydat, p0=guess, maxfev=999999)
-    
+
     cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
     if plotOut:
         plt.plot(xdat, dampedCos(xdat, *params), "-", color=cycle[n])
@@ -202,7 +202,7 @@ def gausCosFit(keyVals, dat, n = 0, ic = False, plotOut = True):
     """Can select nth color from default matplotlib color cycle."""
     xdat=arr(keyVals)
     ydat=arr(dat)
-    
+
     if not ic:
         ymin = np.min(ydat)
         ymax = np.max(ydat)
@@ -213,14 +213,14 @@ def gausCosFit(keyVals, dat, n = 0, ic = False, plotOut = True):
         phi = 0
         y0 = np.mean(ydat)
         sig=tau
-    
+
         guess = [A, sig, f, phi, y0]
     else:
         guess = ic
-        
+
 #     print(guess)
     params, uncert = curve_fit(gausCos, xdat, ydat, p0=guess, maxfev=999999)
-    
+
     cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
     if plotOut:
         plt.plot(xdat, gausCos(xdat, *params), "-", color=cycle[n])
@@ -322,6 +322,19 @@ def gausfit(keyVals, dat, y_offset=False, negative=False, n=0, guess = []):
 #     df
 
     return gauss_params, perr
+
+def Omega(n,m,Omega0,eta):
+    s = max(n,m)-min(n,m)
+    Omega = Omega0*np.exp(-eta**2/2)*eta**s*np.sqrt(math.factorial(max(n,m))/math.factorial(min(n,m)))*scipy.special.genlaguerre(min(n,m),s)(eta**2)
+    return Omega
+
+def Thermal_dephase(t, nbar, Omega0, A, eta=0.33):
+    P = 0
+    for n in range(10):
+        Pn = nbar**n/(1+nbar)**(n+1)
+        P += A*Pn/2*(1-np.cos(Omega(n,n,Omega0,eta)*t))
+    return P
+
 
 def gauss2d(xy, amp, x0, y0, theta, sig_x, sig_y):
     """Math: 2D Gaussian"""

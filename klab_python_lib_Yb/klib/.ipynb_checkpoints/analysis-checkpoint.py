@@ -5,6 +5,9 @@ from .expfile import *
 from .mathutil import *
 # from .plotutil import *
 from .imagutil import *
+
+import klib.experiment_constants as exc
+
 # from .mako import *
 # from .adam import *
 
@@ -13,8 +16,8 @@ class parsedData:
     """Wrapper for parsing HDF5 experiment file. Access original file with "raw" attribute, other attributes include keyName, keysort, fillfracs, points, rois, and roisums."""
     def __init__(self, dataAddress, fnum, countsperphoton = 70, thresh = 20, plots = True, mode = 'mask', masks = 0, w = 0, iters = 0, crop = 0):
         """Load in data file fnum from folder dataAddress. If setting ROI automatically, roi settings order: roi_size, filter_size, threshold. Otherwise provide full list of rois in roiSettings. Returns keySort, array of atom counts with dimensions [variation number, image number in experiment]"""
-        
-        exp = ExpFile(dataAddress+'Raw Data\\', fnum)        
+
+        exp = ExpFile(dataAddress+'Raw Data\\', fnum)
         keyName, keyVals, nreps, images = exp.key_name, exp.key, exp.reps, exp.pics
         variations = len(keyVals)
     #     print(keyVals)
@@ -22,21 +25,23 @@ class parsedData:
         # Subtract mean of first 10 rows from all images, helps get rid of noise near CCD readout edge.
         meanimg = np.mean(images, axis=0)
         wx, wy = meanimg.shape
-        
-        bgrow = np.mean(meanimg[0:30],axis=0)
-        meanimg = arr([i-bgrow for i in meanimg])
-        bgcol = np.mean(meanimg[:,0:30],axis=1)
-        meanimg = meanimg.transpose()
-        # plt.imshow(meanimg)
-        meanimg = arr([i - bgcol for i in meanimg])
-        meanimg = meanimg.transpose()
 
-        bg_img = np.tile(bgrow, (wx,1))+np.tile(bgcol,(wy,1)).transpose()
-            
+        bg = np.mean(meanimg[0:7,0:7])
+        meanimg = np.subtract(meanimg, bg)
+        # bgrow = np.mean(meanimg[0:7],axis=0)
+        # meanimg = arr([i-bgrow for i in meanimg])
+        # bgcol = np.mean(meanimg[:,0:7],axis=1)
+        # meanimg = meanimg.transpose()
+        # plt.imshow(meanimg)
+        # meanimg = arr([i - bgcol for i in meanimg])
+        # meanimg = meanimg.transpose()
+
+        # bg_img = np.tile(bgrow, (wx,1))+np.tile(bgcol,(wy,1)).transpose()
+        print(images.shape[0])
         for i in range(images.shape[0]):
             img = images[i]
-            img = img - bg_img
-            images[i]=img      
+            img = img - bg
+            images[i]=img
         images=arr(images)
 
         if mode == 'decon' or mode == 'mask':
@@ -56,14 +61,14 @@ class parsedData:
         if mode == 'decon':
             images_crop = images[:, ymin-pad:ymax+pad, xmin-pad:xmax+pad]
             images_rl = list(map(lambda image: deconvolve(image, w, iters), images_crop))
-            roisums = np.array(list(map(lambda image: 
+            roisums = np.array(list(map(lambda image:
                                         list(map(lambda mask:
                                                  np.sum(mask*image)-bglevel,
                                                  masks)),
                                         images_rl)))
         elif mode == 'box':
-        # represent the roi sums as a 3-dimensional array.  Axes are variations, trials, rois.  
-            roisums = np.array(list(map(lambda image: 
+        # represent the roi sums as a 3-dimensional array.  Axes are variations, trials, rois.
+            roisums = np.array(list(map(lambda image:
                                         list(map(lambda roi:
                                                  get_roi_sum(image, roi, bgoff, display=False),
                                                  rois)),
@@ -73,28 +78,28 @@ class parsedData:
 #             xmax = arr(rois)[:,1].max()
 #             ymin = arr(rois)[:,2].min()
 #             ymax = arr(rois)[:,3].max()
-            
+
             [xmin, xmax, ymin, ymax] = crop
 
 #             images_crop = images[:, ymin-pad:ymax+pad, xmin-pad:xmax+pad]
             images_crop = images[:, xmin:xmax, ymin:ymax]
-            roisums = np.array(list(map(lambda image: 
+            roisums = np.array(list(map(lambda image:
                                         list(map(lambda mask:
                                                  np.sum(mask*image),
                                                  masks)),
-                                        images_crop)))            
+                                        images_crop)))
         else:
             raise ValueError('Invalid ROI mode. Available modes are box, mask, and decon.')
-        
+
         # Nice way of sorting in multiple dimensions. TODO: better handling for arbitrary keyVal shapes.
         if len(keyVals.shape)==1:
             sort = np.argsort(keyVals)
 #             sort = arr(range(len(keyVals)))
         elif len(keyVals.shape)==2:
             sort = np.lexsort((keyVals[:,0],keyVals[:,1]))
-        
+
         keySort = keyVals[sort]
-        
+
         npics = (images.shape[0]//nreps)//keyVals.shape[0]
         images = images.reshape((variations, nreps, npics, images.shape[1], images.shape[2]))
         if mode == 'decon' or mode == 'mask':
@@ -123,31 +128,31 @@ class parsedData:
         error_first = z*np.sqrt(fill_first*(1-fill_first)/points)
         error_last = z*np.sqrt(fill_last*(1-fill_last)/points)
         error = z*np.sqrt(fillfracs*(1-fillfracs)/points)
-        
+
         makedirifneed(dataAddress+'losses/')
         makedirifneed(dataAddress+'fileparams/')
         f = open(dataAddress+'fileparams/'+str(fnum)+'.pkl','wb')
         pickle.dump(exp.return_variables(),f)
         f.close()
-        
-        
+
+
     #     lowerfrac = z*np.sqrt(fillfracs*(1-fillfracs)/points)
         self.data_address = dataAddress
         self.error = error
         self.error_first = error_first
         self.error_last = error_last
-        
+
         self.imsort = imsort
-        
+
 #         roiimgs = []
 #         for roi in rois:
 #             rimg = meanimg[roi[2]:roi[3],roi[0]:roi[1]]
 #             roiimgs.append(rimg)
 #         self.roiimgs = arr(roiimgs)
-        
+
 #         roi = rois[len(rois)//2]
 #         self.roiimg = meanimg[roi[2]:roi[3],roi[0]:roi[1]]
-        
+
         self.fillfracs = fillfracs
         self.fill_first = fill_first
         self.fill_last = fill_last
@@ -165,13 +170,13 @@ class parsedData:
         self.npics = npics
         self.nreps = nreps
         self.meanimg = meanimg
-        
+
         self.masks = masks
 
 def makedirifneed(fp):
     if not os.path.exists(fp):
         os.makedirs(fp)
-        
+
 def hist(parsed_data, countsperphoton = "Default", thresh = "Default", rng = None, n0 = 0, n1=0):
     """Wrapper for hist_stats, will default to thresholds and counts per photon used when creating parsedData object, but can also manually specify values."""
     if countsperphoton == "Default":
@@ -180,7 +185,7 @@ def hist(parsed_data, countsperphoton = "Default", thresh = "Default", rng = Non
         thresh = parsed_data.thresh
     print("Current File: " + str(parsed_data.fnum))
     return hist_stats_roi(parsed_data.roisums, thresh = thresh, countsperphoton = countsperphoton, rng=rng, n0 = n0, n1=n1)
-        
+
 def getLossData(parsed_data, rois = -1, plots = False, timeOrdered = False, survival = False):
     """Returns sorted keyvals, loss between pairs of images in experiment, and error in that measurement, in that order. If data from individual roi is wanted, specify which roi number with indroi input."""
 
@@ -206,7 +211,7 @@ def getLossData(parsed_data, rois = -1, plots = False, timeOrdered = False, surv
         return ks, (100-arr(losses))/100, arr(losserrs)/100
     else:
         return ks, arr(losses), arr(losserrs)
-    
+
 def indPhases(parsed_data, plot = True, f = 1, modnum = 1, keepind = -1):
 #         centers = []
 #         errors = []
@@ -226,10 +231,10 @@ def indPhases(parsed_data, plot = True, f = 1, modnum = 1, keepind = -1):
 #             maxcoord = ks[np.argmax(losses)]
 
         if modnum == 1:
-            losses = arr(losses)        
+            losses = arr(losses)
             ks = arr(parsed_data.keySort)
-            losserrs = arr(losserrs)   
-        
+            losserrs = arr(losserrs)
+
         else:
 #             losses = np.mean(arr([losses[:12], losses[12:]]), axis = 0)
             losses = np.mean(np.split(arr(losses),modnum), axis = 0)
@@ -241,7 +246,7 @@ def indPhases(parsed_data, plot = True, f = 1, modnum = 1, keepind = -1):
             losses = losses[keepind]
             ks = ks[keepind]
             losserrs = losserrs[keepind]
-        
+
         ks = ks+0.75
 
 #         ks = ks[losses>0]
@@ -304,7 +309,7 @@ def get_threshold(evencounts, oddcounts, tmin = 2, tmax = 10, criteria = 'inf'):
         aa = len(sums[sums > 1])
         vv = len(sums[sums < 1])
         av = len(sums[diffs == 1])
-        va = len(sums[diffs < 0])        
+        va = len(sums[diffs < 0])
         infs.append(va)
         losses.append(2*(av-va))
     tots = np.array(infs)+np.array(losses)
@@ -320,7 +325,7 @@ def get_threshold(evencounts, oddcounts, tmin = 2, tmax = 10, criteria = 'inf'):
 #     lossfracs = []
 #     infidelities = []
 # # roisums_old: (variation, nreps*npics, rois), roisums: (variation, nreps, npics, rois)
-# # The issue below is that flatten mode 'F' (column order) is being used s.th. iterating by 2 jumps images and not ROIs. Easy fix for now but keep in mind for eventually handling 
+# # The issue below is that flatten mode 'F' (column order) is being used s.th. iterating by 2 jumps images and not ROIs. Easy fix for now but keep in mind for eventually handling
 # #     flat = np.array(roisums[i,10:,:]).flatten('F')/countsperphoton
 #     a, b, c, d = roisums.shape
 #     roisums = roisums.reshape(a, b*c, d)
@@ -341,7 +346,7 @@ def get_threshold(evencounts, oddcounts, tmin = 2, tmax = 10, criteria = 'inf'):
 
 #     if thresh==-999:
 #         thresh = get_threshold(evencounts, oddcounts, criteria = crit, tmin = tmin)
-    
+
 #     if plots:
 #         ne, bse, ps = plt.hist(evencounts,50, normed=True, range = rng, histtype = 'step', color = '0')
 #         plt.plot([thresh, thresh],[0, max(ne)],'k--')
@@ -355,7 +360,7 @@ def get_threshold(evencounts, oddcounts, tmin = 2, tmax = 10, criteria = 'inf'):
 #         plt.ylabel("Normalized Counts")
 #         plt.legend(['Even', 'Odd'])
 #         plt.show()
-    
+
 #     odds = np.array([int(x) for x in oddcounts>thresh])
 #     evens = np.array([int(x) for x in evencounts>thresh])
 #     sums = odds + evens
@@ -381,7 +386,7 @@ def get_threshold(evencounts, oddcounts, tmin = 2, tmax = 10, criteria = 'inf'):
 #         infidelity = np.round(va*100/len(sums), 2)
 #         lossfrac = np.round((av-va)*100/(ff*len(sums)), 2)
 #         inf_err = np.round(np.sqrt(va)*100/len(sums), 2)
-        
+
 #         z = 1.96 # corresponds to 95% CI
 #         if lossfrac>0:
 #             loss_err = 100*z*np.sqrt(.01*lossfrac*(1-.01*lossfrac)/len(sums))
@@ -403,10 +408,10 @@ def hist_stats_roi(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
     lossfracs = []
     infidelities = []
 # roisums_old: (variation, nreps*npics, rois), roisums: (variation, nreps, npics, rois)
-# The issue below is that flatten mode 'F' (column order) is being used s.th. iterating by 2 jumps images and not ROIs. Easy fix for now but keep in mind for eventually handling 
+# The issue below is that flatten mode 'F' (column order) is being used s.th. iterating by 2 jumps images and not ROIs. Easy fix for now but keep in mind for eventually handling
 #     flat = np.array(roisums[i,10:,:]).flatten('F')/countsperphoton
     nVar, nRep, nPic, nRoi = roisums.shape
-    
+
     oddcounts = roisums[i,:,1,:]/countsperphoton
     evencounts = roisums[i,:,0,:]/countsperphoton
 
@@ -419,10 +424,10 @@ def hist_stats_roi(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
             oddcounts = roisums[i,:,1,rois]/countsperphoton
             evencounts = roisums[i,:,0,rois]/countsperphoton
             nRoi = len(rois)
-        
+
     if thresh==-999:
         thresh = get_threshold(evencounts, oddcounts, criteria = crit, tmin = tmin)
-    
+
     if plots:
         ne, bse, ps = plt.hist(evencounts.flatten(),50, density=True, range = rng, histtype = 'step', color = '0')
         plt.plot([thresh, thresh],[0, max(ne)],'k--')
@@ -438,18 +443,18 @@ def hist_stats_roi(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
         plt.savefig('hist.pdf', format='pdf', dpi=1000, bbox_inches='tight')
         plt.show()
 
-    
+
     odds = np.greater(oddcounts, thresh).astype(int)
     evens = np.greater(evencounts, thresh).astype(int)
-    
+
     sums = odds + evens
     diffs = evens - odds
-    
+
     aa = np.greater(sums, 1).astype(int)
     vv = np.less(sums, 1).astype(int)
     av = np.equal(diffs, 1).astype(int)
     va = np.less(diffs, 0).astype(int)
-    
+
     if not n0 == 0:
         av = av.reshape(nRep, n0, n1)
         va = va.reshape(nRep, n0, n1)
@@ -482,11 +487,11 @@ def hist_stats_roi(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
     if ff > 0:
         infidelity = np.round(vaf*100/npair, 2)
         lossfrac = np.round((avf-vaf)*100/(ff*npair), 2)
-        
+
 #         lossfrac = np.round((avf)*100/(ff*npair), 2) #This is more conservative estimate of loss without considering VA.
-        
+
         inf_err = np.round(np.sqrt(vaf)*100/npair, 2)
-        
+
         z = 1.96 # corresponds to 95% CI
         if lossfrac>0:
             loss_err = 100*z*np.sqrt(.01*lossfrac*(1-.01*lossfrac)/npair)
@@ -502,21 +507,21 @@ def hist_stats_roi(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
         print('average infidelity: ' + str(infidelity)+ ' += '+ str(inf_err)+ ' percent')
         print('losses: ' + str(lossfrac)+ ' += '+ str(loss_err)+ ' percent')
         print('even/odd thresholds: ',thresh,thresh)
-        
+
 #     plt.imshow(np.sum(av, axis = 0))
 #     plt.title('av')
 #     plt.colorbar()
 #     plt.show()
-    
+
 #     plt.imshow(np.sum(va, axis = 0))
 #     plt.title('va')
 #     plt.colorbar()
 #     plt.show()
-    
+
 #     plt.imshow(np.sum(av_va, axis = 0))
 #     plt.title("av_va")
 #     plt.colorbar()
-#     plt.show()    
+#     plt.show()
     if not returnFullData:
         return infidelity, inf_err, lossfrac, loss_err
     else:
@@ -526,7 +531,7 @@ def correlationsNN(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
     lossfracs = []
     infidelities = []
 # roisums_old: (variation, nreps*npics, rois), roisums: (variation, nreps, npics, rois)
-# The issue below is that flatten mode 'F' (column order) is being used s.th. iterating by 2 jumps images and not ROIs. Easy fix for now but keep in mind for eventually handling 
+# The issue below is that flatten mode 'F' (column order) is being used s.th. iterating by 2 jumps images and not ROIs. Easy fix for now but keep in mind for eventually handling
 #     flat = np.array(roisums[i,10:,:]).flatten('F')/countsperphoton
     nVar, nRep, nPic, nRoi = roisums.shape
     oddcounts = roisums[i,:,1,:]/countsperphoton
@@ -534,7 +539,7 @@ def correlationsNN(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
 
     if thresh==-999:
         thresh = get_threshold(evencounts, oddcounts, criteria = crit, tmin = tmin)
-    
+
     if plots:
         ne, bse, ps = plt.hist(evencounts.flatten(),50, normed=True, range = rng, histtype = 'step', color = '0')
         plt.plot([thresh, thresh],[0, max(ne)],'k--')
@@ -550,22 +555,22 @@ def correlationsNN(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
 #         plt.savefig('hist.pdf', format='pdf', dpi=1000, bbox_inches='tight')
         plt.show()
 
-    
+
     odds = np.greater(oddcounts, thresh).astype(int)
     evens = np.greater(evencounts, thresh).astype(int)
-    
+
     sums = odds + evens
     diffs = evens - odds
-    
+
     aa = np.greater(sums, 1).astype(int)
     vv = np.less(sums, 1).astype(int)
     av = np.equal(diffs, 1).astype(int)
     va = np.less(diffs, 0).astype(int)
-    
+
     N = np.sqrt(nRoi).astype(int)
     av = av.reshape(nRep, N, N)
     va = va.reshape(nRep, N, N)
-    
+
     avxp = np.roll(av, 1, axis = 1)
     avxp[:, 0, :] = 0
     avxm = np.roll(av, -1, axis = 1)
@@ -574,7 +579,7 @@ def correlationsNN(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
     avyp[:, :, 0] = 0
     avym = np.roll(av, -1, axis = 2)
     avym[:, :, -1] = 0
-    
+
     vaxp = np.roll(va, 1, axis = 1)
     vaxp[:, 0, :] = 0
     vaxm = np.roll(va, -1, axis = 1)
@@ -583,7 +588,7 @@ def correlationsNN(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
     vayp[:, :, 0] = 0
     vaym = np.roll(va, -1, axis = 2)
     vaym[:, :, -1] = 0
-    
+
     aaf, vvf, avf, vaf = np.sum(aa), np.sum(vv), np.sum(av), np.sum(va)
     npair = len(sums.flatten())
     if not quiet:
@@ -598,12 +603,12 @@ def correlationsNN(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
 
     tot = aaf+vvf+avf+vaf
     ff = (aaf+avf)/tot # fill fraction
-    
+
     if ff > 0:
         infidelity = np.round(vaf*100/npair, 2)
         lossfrac = np.round((avf-vaf)*100/(ff*npair), 2)
         inf_err = np.round(np.sqrt(vaf)*100/npair, 2)
-        
+
         z = 1.96 # corresponds to 95% CI
         if lossfrac>0:
             loss_err = 100*z*np.sqrt(.01*lossfrac*(1-.01*lossfrac)/npair)
@@ -613,52 +618,52 @@ def correlationsNN(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = '
     else:
 #         print('fill fraction = 0')
         return NULL
-        
+
     av_va =   (avxp + avxm + avyp + avym)*va/(av.sum(axis = 0) * va.sum(axis = 0))*nRep
     av_av = (avxp + avxm + avyp + avym)*av/(av.sum(axis = 0) * av.sum(axis = 0))*nRep
     va_va = (vaxp + vaxm + vayp + vaym)*va/(va.sum(axis = 0) * va.sum(axis = 0))*nRep
     va_av =   (vaxp + vaxm + vayp + vaym)*av/(va.sum(axis = 0) * av.sum(axis = 0))*nRep
-    
+
 #     print(av_av[np.sum(av_av, axis = (1,2))==8][0])
-    
+
     plt.plot(np.sum(av_va, axis = (1,2)))
     plt.show()
-    
+
     plt.plot(np.sum(av_av, axis = (1,2)))
     plt.show()
-    
+
     plt.plot(np.sum(va_va, axis = (1,2)))
     plt.show()
-    
+
     plt.plot(np.sum(va_av, axis = (1,2)))
     plt.show()
-    
+
     print(np.argmax(np.sum(av_av, axis = (1,2))))
-    
-    
-    
+
+
+
     lossfracs.append(lossfrac)
     infidelities.append(infidelity)
     if not quiet:
         print('average infidelity: ' + str(infidelity)+ ' += '+ str(inf_err)+ ' percent')
         print('losses: ' + str(lossfrac)+ ' += '+ str(loss_err)+ ' percent')
         print('even/odd thresholds: ',thresh,thresh)
-        
+
 #     plt.imshow(np.sum(av, axis = 0))
 #     plt.title('av')
 #     plt.colorbar()
 #     plt.show()
-    
+
 #     plt.imshow(np.sum(va, axis = 0))
 #     plt.title('va')
 #     plt.colorbar()
 #     plt.show()
-    
+
 #     plt.imshow(np.sum(av_va, axis = 0))
 #     plt.title("av_va")
 #     plt.colorbar()
-#     plt.show()    
-    
+#     plt.show()
+
 #     return infidelity, inf_err, lossfrac, loss_err
     return av, va, av_va, av_av, va_va, va_av
 
@@ -684,7 +689,7 @@ def img_stats(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = 'tot',
 
     if thresh==-999:
         thresh = get_threshold(evencounts, oddcounts, criteria = crit, tmin = tmin)
-    
+
     if plots:
         ne, bse, ps = plt.hist(evencounts,50, normed=True, histtype = 'step')
         plt.plot([thresh, thresh],[0, max(ne)],'--')
@@ -697,14 +702,14 @@ def img_stats(roisums, thresh = -999, countsperphoton=70, fnum=-1, crit = 'tot',
         plt.xlabel("Photons Collected")
         plt.ylabel("Normalized Counts")
     #     plt.show()
-    
+
     odds = np.array([oddcounts>thresh])
     evens = np.array([evencounts>thresh])
-    
+
     fill = evens
     losses = evens&~odds
-    
-    
+
+
 #     sums = odds + evens
 #     diffs = evens - odds
 #     aa = len(sums[sums > 1])
@@ -756,17 +761,17 @@ def spect_plot(keysorts, counts, points, guess):
 
     x = (popt[-3]-ks)*1e3
     xs = np.linspace(np.max(x),np.min(x),1000)
-    
+
 #     n=np.max(cts)
     n=1
-    
+
 #     plt.errorbar(x, cts, yerr = error,fmt='.')
 #     plt.plot(xs, triplor(kss, *popt))
 
     # plt.plot([popt[5], popt[5]],[0, .15], 'r-')
     # plt.plot([popt[5]-popt[6], popt[5]-popt[6]],[0, .15], 'r-')
     # plt.plot([popt[5]+popt[6], popt[5]+popt[6]],[0, .15], 'r-')
-    
+
     print("Blue SB:")
     print(np.abs(popt[0]))
     print('+-')
@@ -805,7 +810,7 @@ def find_rois(dat, roi_size, filter_size, threshold, bg_offset, display=True):
 
 #     sort = np.lexsort((xys[:,0],xys[:,1]))
 #     xys = xys[sort]
-    
+
 #     keep = [True]
 #     for i in range(len(xys)-1):
 #         xy = xys[i]
@@ -815,36 +820,36 @@ def find_rois(dat, roi_size, filter_size, threshold, bg_offset, display=True):
 #             keep.append(False)
 #         else:
 #             keep.append(True)
-    
+
 #     xys = xys[keep]
-    
+
     rois=[[int(xy[1])-roi_size, int(xy[1])+roi_size, int(xy[0])-roi_size, int(xy[0])+roi_size] for xy in xys]
     bgrois = [[roi[0]+bg_offset[0],roi[1]+bg_offset[0],roi[2]+bg_offset[1],roi[3]+bg_offset[1]] for roi in rois]
 
     corners = arr(rois)[:,[0,2]]
-    
+
     for i in range(len(corners)-1):
         if corners[i+1,1]-corners[i,1] < roi_size:
             corners[i+1,1] = corners[i,1]
-    
+
 # #     Find average separation.
 #     xvals = corners[:,0].sort()
 #     diff = [y - x for x, y in zip(*[iter(xvals)] * 2)]
 #     davg = sum(diff) / len(diff)
-    
+
     # corners = (corners/roiSettings[0]).astype(int)
 #     corners = np.fix((corners-[min(corners[:,0]), min(corners[:,1])])/(roi_size))
     sort = np.lexsort((corners[:,0], corners[:,1]))
 #     sort0 = np.argsort(corners[:,1])
-    
+
     rois = arr(rois)[sort]
     bgrois = arr(bgrois)[sort]
     xys = xys[sort]
-    
+
     rois = rois[corners[:,0]>10]
     corners = corners[corners[:,0]>10]
     rois = rois[corners[:,1]<dat.shape[0]-10]
-    
+
     if display:
         fig, ax = plt.subplots(figsize = (15,15))
         ax.imshow(dat)
@@ -958,26 +963,814 @@ def get_max(image, roi, bg_offset, display=True, bgsub = False):
     immax = max(image[roi[2]:roi[3],roi[0]:roi[1]])
     return immax
 
+def var_scan_atom_sumcounts(exp, run, masks, threshold):
+    a_cs_ls = []
+    pics = exp.pics[::2]
+    b = get_binarized(exp, run, masks, threshold=threshold)[::2]
+    bkg = np.mean(pics[:, 0:7, 0:7])
+
+    for i in range(len(exp.key)):
+        pics_var = pics[i*exp.reps : (i + 1)*exp.reps]
+        b_var = b[i*exp.reps : (i + 1)*exp.reps]
+        cs = []
+        for i in range(len(masks)):
+            m = masks[i]
+            sig = pics_var[b_var[:,i]>0.5]
+            if (len(sig) > 0):
+                diff = [np.subtract(s, bkg) for s in sig]
+                cs.append(np.mean([np.sum(d) for d in diff*m]))
+        a_cs_ls.append(np.mean(cs))
+    a_cs_ls = np.array(a_cs_ls)
+    a_cs_ls_sorted = np.array(a_cs_ls)[np.argsort(exp.key)]
+
+    key_sorted = np.sort(exp.key)
+
+    fig, ax = plt.subplots(figsize=[5,4])
+    plt.plot(key_sorted, a_cs_ls_sorted, 'ko', alpha=0.7)
+    plt.xlabel(exp.key_name)
+    plt.ylabel('mean atom counts')
+    plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+    plt.show()
+
+
+# Need to fix this function to return counts in each variation, right now it's
+# summing counts over all images
+def var_scan_sumcounts(exp, run, masks, fit='none'):
+    cs_ls = []
+    pics = exp.pics[::2]
+
+    for m in masks:
+        sig = exp.pics[:]
+        bkg = np.mean(exp.pics[:, 0:7, 0:7])
+        diff = [np.subtract(s, bkg) for s in sig]
+        cs = [np.sum(d) for d in diff*m]
+        cs_ls.append(cs)
+
+    cs_ls = np.sum(cs_ls, axis=0)
+    cs_ls_sorted = np.array(cs_ls)[np.argsort(exp.key)]
+
+    key_sorted = np.sort(exp.key)
+
+    if fit == 'gaussian_peak':
+        pguess = [np.max(patom_sorted)-np.min(patom_sorted),
+                  key_sorted[np.argmax(patom_sorted)],
+                  (key_sorted[-1]-key_sorted[0])/3,
+                  np.min(patom_sorted)]
+        popt, pcov = curve_fit(gaussian, key_sorted, patom_sorted, p0=pguess)
+
+        print('key fit = {:.3e}'.format(popt[1]))
+
+    if fit == 'gaussian_dip':
+        pguess = [-np.max(patom_sorted)+np.min(patom_sorted),
+                  key_sorted[np.argmin(patom_sorted)],
+                  (key_sorted[-1]-key_sorted[0])/3,
+                  np.max(patom_sorted)]
+        popt, pcov = curve_fit(gaussian, key_sorted, patom_sorted, p0=pguess)
+
+        print('key fit = {:.3e}'.format(popt[1]))
+
+
+    if fit == 'hockey':
+        pguess = [(key_sorted[-1]+key_sorted[0])/2,
+                  (np.max(patom_sorted)-np.min(patom_sorted))/ (key_sorted[-1]-key_sorted[0]),
+                  np.max(patom_sorted)]
+        popt, pcov = curve_fit(hockey, key_sorted, patom_sorted, p0=pguess)
+
+        print('key fit = {:.3e}'.format(popt[0]))
+
+    key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
+    fig, ax = plt.subplots(figsize=[5,4])
+    if fit == 'gaussian_peak' or fit == 'gaussian_dip':
+        plt.plot(key_fine, gaussian(key_fine, *popt), 'k-')
+    if fit == 'hockey':
+        plt.plot(key_fine, hockey(key_fine, *popt), 'k-')
+    plt.plot(key_sorted, cs_ls_sorted, 'ko', alpha=0.7)
+    plt.xlabel(exp.key_name)
+    plt.ylabel('summed counts')
+    plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+    plt.show()
+
+def gaussian(x, *p):
+    return p[0] * np.exp( -((x - p[1])**2) / (2*(p[2]**2)) ) + p[3]
+
+def double_gaussian(x, *p):
+    return p[0] * np.exp( -((x- p[1])**2) / (2*(p[2]**2)) ) + p[3] * np.exp( -((x - p[4])**2) / (2*(p[5]**2)) )
+
+def erfc(x, amp, x0, sigma):
+    if x < x0:
+        return amp/2 * (1 + erf((x-x0)/np.sqrt(2)/np.abs(sigma)))
+    if x >= x0:
+        return amp/2 * (1 - erf((x-x0)/np.sqrt(2)/np.abs(sigma)))
+
+def hockey(x_arr, x0, rate, offset):
+    y_arr =[]
+    for x in x_arr:
+        if x < x0:
+            y_arr.append(offset)
+        else:
+            y_arr.append(offset - rate*(x-x0))
+    return y_arr
+
+def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = True, surv = True, crop = [0,None,0,None], output = True):
+
+    hist_xdata_all = []
+    hist_all = []
+    threshold_all = []
+    popt_all = []
+
+    numarr = []
+    css = []
+
+    if (surv):
+        numarr = [0,1]
+    else:
+        numarr = [0]
+
+    for num in numarr:
+        cs = []
+        cut = 10
+        bkg = (np.mean(exp.pics[:, :cut, :-cut]) + np.mean(exp.pics[:, :-cut, -cut:]) + np.mean(exp.pics[:, -cut:, cut:]) + np.mean(exp.pics[:, cut:, :cut]))/4
+
+        for m in masks:
+            sig = exp.pics[num::2, crop[0]:crop[1], crop[2]:crop[3]]
+            diff = sig-bkg #[np.subtract(sig[i], bkg) for i in range(len(sig))]
+            sum_masked = [np.sum(d) for d in diff*m]
+            [cs.append(c) for c in sum_masked]
+
+        css.append(cs)
+
+        hist, bin_edges = np.histogram(cs, bins=np.arange(np.min(cs), np.max(cs), bin_width))
+        hist_xdata = np.add(bin_edges, (bin_edges[1]-bin_edges[0])/2)[:-1]
+
+        hist_xdata_all.append(hist_xdata)
+        hist_all.append(hist)
+
+        if (fit):
+            idx_guess = np.abs(hist_xdata - threshold_guess).argmin()
+
+            pguess = [np.max(hist[:idx_guess])-np.min(hist[:idx_guess]),
+                      hist_xdata[np.argmax(hist[:idx_guess])],
+                      (hist_xdata[idx_guess]-hist_xdata[0])/3,
+                      np.max(hist[idx_guess:])-np.min(hist[idx_guess:]),
+                      hist_xdata[np.argmax(hist[idx_guess:])],
+                      (hist_xdata[-1]-hist_xdata[idx_guess])/3]
+            popt, pcov = curve_fit(double_gaussian, hist_xdata, hist, p0=pguess)
+            popt_all.append(popt)
+
+            hist_xdata_fine = np.linspace(hist_xdata[0], hist_xdata[-1], 200, endpoint=True)
+
+            mistake_arr = []
+
+            t_arr = np.linspace(popt[1], popt[4], 100)
+            for t in t_arr:
+
+                atom_mistake = erfc(t, popt[3], popt[4], popt[5])
+                void_mistake = erfc(t, popt[0], popt[1], popt[2])
+                mistake = void_mistake + atom_mistake
+                mistake_arr.append(mistake)
+
+            threshold = t_arr[np.argmin(mistake_arr)]
+            min_mistake = np.min(mistake_arr)
+
+            if num == 0:
+                infidelity = min_mistake/(popt[0]*popt[2]*np.sqrt(2*np.pi)+popt[3]*popt[5]*np.sqrt(2*np.pi))
+
+        else:
+            threshold = threshold_guess
+            min_mistake = 1000
+
+        threshold_all.append(threshold)
+
+    if output == True:
+        fig, ax = plt.subplots(figsize=[6,4])
+        plt.plot(hist_xdata_all[0], hist_all[0], alpha=0.9, drawstyle='steps', color='k', zorder = 0)
+        plt.plot([threshold_all[0], threshold_all[0]], [np.min(hist_all[0]), np.max(hist_all[0])], 'k--', alpha=0.9, label='even', zorder = 0)
+        if (surv):
+            plt.plot(hist_xdata_all[1], hist_all[1], alpha=0.5, drawstyle='steps', color='k', zorder = 0)
+            plt.plot([threshold_all[1], threshold_all[1]], [np.min(hist_all[1]), np.max(hist_all[1])], 'k--', alpha=0.5, label='odd', zorder = 0)
+        if (fit and not surv):
+           plt.plot(hist_xdata_fine, double_gaussian(hist_xdata_fine, *popt), 'b-', alpha=0.4, zorder = 0)
+        plt.xlabel('Counts collected')
+        plt.ylabel('Events')
+        plt.ylim(0, )
+        plt.legend()
+        plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+        plt.show()
+
+        if (fit):
+            print('even/odd bkg peak position: '+'{:.3f}'.format(popt_all[0][1])+'/{:.3f}'.format(popt_all[1][1]))
+            print('even/odd atom peak position: '+'{:.3f}'.format(popt_all[0][4])+'/{:.3f}'.format(popt_all[1][4]))
+            print('even/odd bkg peak width: '+'{:.3f}'.format(abs(popt_all[0][2]))+'/{:.3f}'.format(abs(popt_all[1][2])))
+            print('even/odd atom peak width: '+'{:.3f}'.format(abs(popt_all[0][5]))+'/{:.3f}'.format(abs(popt_all[1][5])))
+            print('even/odd thresholds: '+'{:.3f}'.format(threshold_all[0])+'/{:.3f}'.format(threshold_all[1]))
+            print('fitted infidelity: '+'{:.3f}'.format(infidelity*100)+' percent')
+
+    if (fit):
+        return threshold_all[0], threshold_all[1], popt_all, hist_xdata_all, hist_all, min_mistake, css, infidelity
+    else:
+        return threshold_all[0], threshold_all[1], hist_xdata_all, hist_all, min_mistake, css
+
+# def find_threshold_2(exp, run, roi=[12, 15, 11, 14], threshold_guess = 30, bin_number = 100):
+#     sig = exp.pics[:, roi[0]:roi[1], roi[2]:roi[3]]
+#     bkg = np.mean(exp.pics[:, 0:7, 0:7])
+#     diff = [np.subtract(s, bkg) for s in sig]
+#     cs = [np.sum(d) for d in diff]
+    ############################################
+#     hist_1, bin_edges_1 = np.histogram(cs[::2], bins=bin_number)
+#     hist_xdata_1 = np.add(bin_edges_1, (bin_edges_1[1]-bin_edges_1[0])/2)[:-1]
+
+#     idx_guess = np.abs(hist_xdata_1 - threshold_guess).argmin()
+
+#     pguess_1 = [np.max(hist_1[:idx_guess])-np.min(hist_1[:idx_guess]),
+#               hist_xdata_1[np.argmax(hist_1[:idx_guess])],
+#               (hist_xdata_1[idx_guess]-hist_xdata_1[0])/3,
+#               np.max(hist_1[idx_guess:])-np.min(hist_1[idx_guess:]),
+#               hist_xdata_1[np.argmax(hist_1[idx_guess:])],
+#               (hist_xdata_1[-1]-hist_xdata_1[idx_guess])/3,
+#               np.min(hist_1)]
+#     popt_1, pcov_1 = curve_fit(double_gaussian, hist_xdata_1, hist_1, p0=pguess_1)
+#
+#     hist_xdata_fine_1 = np.linspace(hist_xdata_1[0], hist_xdata_1[-1], 200, endpoint=True)
+
+#     mistake_arr_1 = []
+#     t_arr_1 = np.linspace(popt_1[1], popt_1[4], 100)
+#     for t in t_arr_1:
+
+#        atom_mistake = erfc(t, popt_1[3], popt_1[4], popt_1[5])
+#        void_mistake = erfc(t, popt_1[0], popt_1[1], popt_1[2])
+#        mistake = void_mistake + atom_mistake
+#        mistake_arr_1.append(mistake)
+
+#    threshold_1 = t_arr_1[np.argmin(mistake_arr_1)]
+    ############################################
+#    hist_2, bin_edges_2 = np.histogram(cs[1::2], bins=bin_number)
+#    hist_xdata_2 = np.add(bin_edges_2, (bin_edges_2[1]-bin_edges_2[0])/2)[:-1]
+
+#    idx_guess = np.abs(hist_xdata_1 - threshold_guess).argmin()
+
+#    pguess_2 = [np.max(hist_2[:idx_guess])-np.min(hist_2[:idx_guess]),
+#              hist_xdata_2[np.argmax(hist_2[:idx_guess])],
+#              (hist_xdata_2[idx_guess]-hist_xdata_1[0])/3,
+#              np.max(hist_2[idx_guess:])-np.min(hist_2[idx_guess:]),
+#              hist_xdata_2[np.argmax(hist_2[idx_guess:])],
+#              (hist_xdata_2[-1]-hist_xdata_2[idx_guess])/3,
+#              np.min(hist_2)]
+#    popt_2, pcov_2 = curve_fit(double_gaussian, hist_xdata_2, hist_2, p0=pguess_2)
+
+#    hist_xdata_fine_2 = np.linspace(hist_xdata_2[0], hist_xdata_2[-1], 200, endpoint=True)
+
+#    mistake_arr_2 = []
+#    t_arr_2 = np.linspace(popt_2[1], popt_2[4], 100)
+#    for t in t_arr_2:
+
+#        atom_mistake = erfc(t, popt_2[3], popt_2[4], popt_2[5])
+#        void_mistake = erfc(t, popt_2[0], popt_2[1], popt_2[2])
+#        mistake = void_mistake + atom_mistake
+#        mistake_arr_2.append(mistake)
+
+#    threshold_2 = t_arr_2[np.argmin(mistake_arr_2)]
+    ############################################
+#    fig, ax = plt.subplots(figsize=[5,4])
+#    plt.plot(hist_xdata_fine_1, double_gaussian(hist_xdata_fine_1, *popt_1), 'k-')
+#    plt.plot(hist_xdata_1, hist_1, 'ko', alpha=0.7, label='1st img')
+#    plt.plot([threshold_1, threshold_1], [np.min(hist_1), np.max(hist_1)], 'r--', alpha=0.9, label='1st img threshold: %.2f' %threshold_1)
+#    plt.plot(hist_xdata_fine_2, double_gaussian(hist_xdata_fine_2, *popt_2), 'k:')
+#    plt.plot(hist_xdata_2, hist_2, marker='o', c='k', mfc='white', alpha=0.7, linestyle='none', label='2nd img')
+#    #plt.plot([threshold_2, threshold_2], [np.min(hist_2), np.max(hist_2)], 'r--', alpha=0.5, label='2nd img threshold: %.2f' %threshold_2)
+#    plt.xlabel('counts')
+#    plt.legend(bbox_to_anchor=[1, 1])
+#    plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+#    plt.show()
+#
+#    return threshold_1 #, popt, void_mistakes, atom_mistakes,
+
+def get_binarized(exp, run, masks, threshold=30, crop=[0,None,0,None]):
+
+    cs_arr = []
+    cut = 10
+    bkg = (np.mean(exp.pics[:, :cut, :-cut]) + np.mean(exp.pics[:, :-cut, -cut:]) + np.mean(exp.pics[:, -cut:, cut:]) + np.mean(exp.pics[:, cut:, :cut]))/4
+
+    for m in masks:
+        sig = exp.pics[:, crop[0]:crop[1], crop[2]:crop[3]]
+        diff = [np.subtract(sig[i], bkg) for i in range(len(sig))]
+        cs = [np.sum(d) for d in diff*m]
+        cs_arr.append(cs)
+
+    binarized_images = []
+    for cs in cs_arr:
+        binarized_atoms = []
+        for c in cs:
+            binarized_atoms.append(c > threshold)
+        binarized_images.append(np.array(binarized_atoms, dtype=int))
+
+    return np.transpose(binarized_images)
+
+def get_masks(imgc, x0=21, y0=14, dx=7, dy=11, N=[4,4], r=2):
+    x = np.arange(len(imgc[0]))
+    y = np.arange(len(imgc[:,0]))
+    xx, yy = np.meshgrid(x, y)
+    masks = []
+
+    for i in range(N[0]):
+        for j in range(N[1]):
+            mask = np.zeros_like(imgc)
+            xm, ym = x0 + i*dx, y0 + j*dy
+            mask = np.sqrt((xx-xm)**2 + (yy-ym)**2) < r
+            masks.append(mask)
+
+    imgcmask = (imgc - np.mean(imgc[:10, :10]))*np.sum(masks,axis=0)
+
+    plt.imshow(imgcmask)
+    return masks
+
+def var_scan_loadprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None,0,None]):
+
+    data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+    data = data[::2]
+
+    if (exp.key.ndim > 1):
+        key = exp.key[:, sortkey]
+    else:
+        key = exp.key
+
+    patom = []
+    patom_err = []
+    for i in range(len(exp.key)):
+        p = np.sum(data[i*exp.reps : (i + 1)*exp.reps])/exp.reps/len(masks)
+        patom.append(p)
+        patom_err.append(np.sqrt(p*(1-p)/exp.reps/len(masks)))
+
+
+    if (exp.key.ndim > 1):
+
+        patom_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key), patom))), key=lambda x: [x[0], x[1]]))
+        patom_sorted_reshape = np.reshape(patom_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1]))))
+        patom_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key),patom_err))), key=lambda x: [x[0], x[1]]))
+        patom_sorted_reshape_err = np.reshape(patom_uncertainty_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1]))))
+
+        k0min = np.min(patom_sorted[:,0])
+        k0max = np.max(patom_sorted[:,0])
+        k1min = np.min(patom_sorted[:,1])
+        k1max = np.max(patom_sorted[:,1])
+
+        fig, ax = plt.subplots(figsize=[5,4])
+        im = plt.imshow(patom_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+                   aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+        plt.xlabel(exp.key_name[1])
+        plt.ylabel(exp.key_name[0])
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel('load_prob')
+        plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+        plt.show()
+
+
+
+    else:
+        patom_sorted = np.array(patom)[np.argsort(key)]
+        patom_err_sorted = np.array(patom_err)[np.argsort(key)]
+
+        key_sorted = np.sort(key)
+
+        if fit == 'gaussian_peak':
+            try:
+                pguess = [np.max(patom_sorted)-np.min(patom_sorted),
+                          key_sorted[np.argmax(patom_sorted)],
+                          (key_sorted[-1]-key_sorted[0])/3,
+                          np.min(patom_sorted)]
+                popt, pcov = curve_fit(gaussian, key_sorted, patom_sorted, p0=pguess)
+
+                print('key fit = {:.3e}'.format(popt[1]))
+            except:
+                print('fit failed')
+
+        if fit == 'gaussian_dip':
+            pguess = [-np.max(patom_sorted)+np.min(patom_sorted),
+                      key_sorted[np.argmin(patom_sorted)],
+                      (key_sorted[-1]-key_sorted[0])/3,
+                      np.max(patom_sorted)]
+            popt, pcov = curve_fit(gaussian, key_sorted, patom_sorted, p0=pguess)
+
+            print('key fit = {:.3e}'.format(popt[1]))
+
+
+        if fit == 'hockey':
+            pguess = [(key_sorted[-1]+key_sorted[0])/2,
+                      (np.max(patom_sorted)-np.min(patom_sorted))/ (key_sorted[-1]-key_sorted[0]),
+                      np.max(patom_sorted)]
+            popt, pcov = curve_fit(hockey, key_sorted, patom_sorted, p0=pguess)
+
+            print('key fit = {:.3e}'.format(popt[0]))
+
+        patom_uncertainty = np.sqrt(exp.reps*len(masks)*patom_sorted)/(exp.reps*len(masks))
+
+        key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
+        fig, ax = plt.subplots(figsize=[5,4])
+        if fit == 'gaussian_peak' or fit == 'gaussian_dip':
+            plt.plot(key_fine, gaussian(key_fine, *popt), 'k-')
+        if fit == 'hockey':
+            plt.plot(key_fine, hockey(key_fine, *popt), 'k-')
+        plt.errorbar(key_sorted, patom_sorted, patom_uncertainty, color='k', marker='o', linestyle=':', alpha=0.7)
+        if (type(exp.key_name) == str):
+            plt.xlabel(exp.key_name)
+        else:
+            plt.xlabel(exp.key_name[sortkey])
+        plt.ylabel('load prob')
+        plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+        plt.ylim(0, 1)
+        plt.show()
+
+    if (exp.key.ndim > 1):
+        return patom_sorted
+    else:
+        return key_sorted, patom_sorted
+
+def get_loss(exp, run, masks, t, sortkey=0, crop=[0,None,0,None]):
+
+    data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+    loaddata = data[::2]
+    survdata = data[1::2]
+
+    if (exp.key.ndim > 1):
+        key = exp.key[:, sortkey]
+    else:
+        key = exp.key
+
+    aa = 0
+    av = 0
+    va = 0
+    vv = 0
+    a = 0
+
+    for i in range(len(key)):
+
+        for j in range(exp.reps):
+            for m in range(len(masks)):
+                atom1 = loaddata[i*exp.reps +j][m]
+                atom2 = survdata[i*exp.reps +j][m]
+                if (atom1 and atom2):
+                    aa += 1
+                elif (atom1 and atom2==0):
+                    av += 1
+                elif (atom1==0 and atom2):
+                    va += 1
+                elif (atom1==0 and atom2==0):
+                    vv += 1
+                if (atom1):
+                    a += 1
+
+    npair = aa+av+va+vv
+
+    load = a/npair
+    surv = aa/a
+
+    load_err = np.sqrt(load*(1-load)/npair)
+    surv_err = np.sqrt(surv*(1-surv)/a)
+
+    print(' ')
+    print('total pairs: ' + str(npair))
+    print('atom atom: ' + str(aa))
+    print('void void: ' + str(vv))
+    print('atom void: ' + str(av))
+    print('void atom: ' + str(va))
+    print('load: ' +  '{:.3f}'.format(load*100)+ ' +- '+ '{:.3f}'.format(load_err*100)+ ' percent')
+    print('survival: ' +  '{:.3f}'.format(surv*100)+ ' +- '+ '{:.3f}'.format(surv_err*100)+ ' percent')
+    print('loss: ' +  '{:.3f}'.format((1-surv)*100)+ ' +- '+ '{:.3f}'.format(surv_err*100)+ ' percent')
+    #print('average infidelity: ' + '{:.3f}'.format(inf*100)+ ' +- '+ '{:.3f}'.format(inf_err*100)+ ' percent')
+
+    return va/npair
+
+
+def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None,0,None]):
+
+    data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+    loaddata = data[::2]
+    survdata = data[1::2]
+
+    surv_prob = []
+    surv_prob_uncertainty = []
+    popt, pcov = [], []
+
+    key = exp.key
+
+    for i in range(len(key)):
+        aa = 0
+        a = 0
+        for j in range(exp.reps):
+            for m in range(len(masks)):
+                atom1 = loaddata[i*exp.reps +j][m]
+                atom2 = survdata[i*exp.reps +j][m]
+                if (atom1 and atom2):
+                    aa += 1
+                if (atom1):
+                    a += 1
+        if a:
+            p = aa/a
+            surv_prob.append(p)
+            surv_prob_uncertainty.append(np.sqrt(p*(1-p)/a))
+        else:
+            surv_prob.append(0)
+            surv_prob_uncertainty.append(0)
+
+
+    if (np.shape(exp.key)[-1] == 2):
+
+        surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key), surv_prob))), key=lambda x: [x[0], x[1]]))
+        surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1]))))
+        surv_prob_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key),surv_prob_uncertainty))), key=lambda x: [x[0], x[1]]))
+        surv_prob_sorted_reshape_err = np.reshape(surv_prob_uncertainty_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1]))))
+
+        k0min = np.min(surv_prob_sorted[:,0])
+        k0max = np.max(surv_prob_sorted[:,0])
+        k1min = np.min(surv_prob_sorted[:,1])
+        k1max = np.max(surv_prob_sorted[:,1])
+        key0 = np.sort(np.unique(surv_prob_sorted[:,0]))
+        key1 = np.sort(np.unique(surv_prob_sorted[:,1]))
+
+        fig, ax = plt.subplots(figsize=[5,4])
+        im = plt.imshow(surv_prob_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+                   aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+        plt.xlabel(exp.key_name[1])
+        plt.ylabel(exp.key_name[0])
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel('surv_prob')
+        plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+        plt.show()
+
+    if (np.shape(exp.key)[-1] == 3):
+
+        surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key), surv_prob))), key=lambda x: [x[0], x[1], x[2]]))
+        surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,3], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))))
+        surv_prob_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(exp.key),surv_prob_uncertainty))), key=lambda x: [x[0], x[1], x[2]]))
+        surv_prob_sorted_reshape_err = np.reshape(surv_prob_uncertainty_sorted[:,2], (len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))))
+
+        k0min = np.min(surv_prob_sorted[:,0])
+        k0max = np.max(surv_prob_sorted[:,0])
+        k1min = np.min(surv_prob_sorted[:,1])
+        k1max = np.max(surv_prob_sorted[:,1])
+        k2min = np.min(surv_prob_sorted[:,2])
+        k2max = np.max(surv_prob_sorted[:,2])
+        key0 = np.sort(np.unique(surv_prob_sorted[:,0]))
+        key1 = np.sort(np.unique(surv_prob_sorted[:,1]))
+        key2 = np.sort(np.unique(surv_prob_sorted[:,2]))
+
+        keylengths = np.array([len(np.unique(exp.key[:, 0])), len(np.unique(exp.key[:, 1])), len(np.unique(exp.key[:, 2]))])
+        minnumkey = np.min(keylengths)
+        minnumarg = np.argmin(keylengths)
+        # keys = np.array([key0, key1, key2])
+
+
+
+
+        # fig, ax = plt.subplots(figsize=[5,4], nrows=minnumkey)
+        # for i in range(minnumkey):
+        #     im = plt.imshow(surv_prob_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+        #                aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+        #     plt.xlabel(exp.key_name[1])
+        #     plt.ylabel(exp.key_name[0])
+        #     cbar = plt.colorbar(im)
+        #     cbar.ax.set_ylabel('surv_prob')
+        # plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+
+
+    else:
+
+        surv_prob_sorted = np.array(surv_prob)[np.argsort(key)]
+        surv_prob_uncertainty_sorted = np.array(surv_prob_uncertainty)[np.argsort(key)]
+
+        key_sorted = np.sort(key)
+
+        if (exp.key.ndim == 1):
+            if fit == 'gaussian_peak':
+                pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
+                          key_sorted[np.argmax(surv_prob_sorted)],
+                          (key_sorted[-1]-key_sorted[0])/3,
+                          np.min(surv_prob_sorted)]
+                popt, pcov = curve_fit(gaussian, key_sorted, surv_prob_sorted, p0=pguess)
+
+                print('key fit = {:.5e}'.format(popt[1]))
+
+            if fit == 'gaussian_dip':
+                pguess = [-np.max(surv_prob_sorted)+np.min(surv_prob_sorted),
+                          key_sorted[np.argmin(surv_prob_sorted)],
+                          (key_sorted[-1]-key_sorted[0])/3,
+                          np.max(surv_prob_sorted)]
+                popt, pcov = curve_fit(gaussian, key_sorted, surv_prob_sorted, p0=pguess)
+
+                print('key fit = {:.5e} +/- {:.5e}'.format(popt[1], np.sqrt(np.diag(pcov))[1]))
+
+            if fit == 'hockey':
+                pguess = [(key_sorted[-1]+key_sorted[0])/2,
+                          (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/ (key_sorted[-1]-key_sorted[0]),
+                          np.max(surv_prob_sorted)]
+                popt, pcov = curve_fit(hockey, key_sorted, surv_prob_sorted, p0=pguess)
+
+                print('key fit = {:.5e}'.format(popt[0]))
+                ##saddgbfgb
+
+            if fit == 'triplor':
+                # triplor(x, a0, a1, a2, kc, ks, x0, dx, y0)
+                pguess = [0.4, 0.4, 0.4, 0.05, 0.05,
+                          (key_sorted[-1]+key_sorted[0])/2,
+                          0.06,0]
+                popt, pcov = curve_fit(triplor, key_sorted, surv_prob_sorted, p0=pguess)
+                print('x, a0, a1, a2, kc, ks, x0, dx, y0')
+
+                print(popt)
+
+            if fit == 'dampedCos':
+                # dampedCos(t, A, tau, f, phi, y0): A*np.exp(-t/tau)/2 * (np.cos(2*np.pi*f*t+phi)) + y0
+                pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
+                          key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
+                          (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/2]
+                popt, pcov = curve_fit(dampedCos, key_sorted, surv_prob_sorted, p0=pguess)
+                print('A, tau, f, phi, y0')
+
+                print(popt)
+
+            if fit == 'gausCos':
+                #gausCos(t, A, sig, f, phi, y0):(A/2)*np.exp(-(t/sig)**2/2) * (np.cos(2*np.pi*f*t+phi)) + y0
+                pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
+                          key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
+                          (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/2]
+                popt, pcov = curve_fit(gausCos, key_sorted, surv_prob_sorted, p0=pguess)
+                print('A, tau, f, phi, y0')
+
+                print(popt)
+                
+            if fit == 'Thermal_dephase':
+                #Thermal_dephase(t, nbar, Omega0, A, eta=0.33)
+                pguess = [0.5, 17, 1]
+                popt, pcov = curve_fit(Thermal_dephase, key_sorted, surv_prob_sorted, p0=pguess)
+                print('nbar, Omega0, A, eta=0.33')
+
+                print(popt)
+
+            if fit == 'decayt':
+                # decayt(t, tau, a, y0): y0 + a*np.exp(-t/tau)
+                pguess = [key_sorted[-1]/5, np.max(surv_prob_sorted)-np.min(surv_prob_sorted), np.min(surv_prob_sorted)]
+                popt, pcov = curve_fit(decayt, key_sorted, surv_prob_sorted, p0=pguess)
+                print('t, tau, a, y0')
+
+                print(popt)
+
+            key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
+            fig, ax = plt.subplots(figsize=[5,4])
+            if fit == 'gaussian_peak' or fit == 'gaussian_dip':
+                plt.plot(key_fine, gaussian(key_fine, *popt), 'k-')
+            if fit == 'hockey':
+                plt.plot(key_fine, hockey(key_fine, *popt), 'k-')
+            if fit == 'triplor':
+                plt.plot(key_fine, triplor(key_fine, *popt), 'k-')
+            if fit == 'dampedCos':
+                plt.plot(key_fine, dampedCos(key_fine, *popt), 'k-')
+            if fit == 'gausCos':
+                plt.plot(key_fine, gausCos(key_fine, *popt), 'k-')
+            if fit == 'Thermal_dephase':
+                plt.plot(key_fine, Thermal_dephase(key_fine, *popt), 'k-')
+            if fit == 'decayt':
+                plt.plot(key_fine, decayt(key_fine, *popt), 'k-')
+            plt.errorbar(key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, color='k', marker='o', linestyle=':', alpha=0.7)
+            if (type(exp.key_name) == str):
+                plt.xlabel(exp.key_name)
+            else:
+                plt.xlabel(exp.key_name[sortkey])
+            plt.ylabel('surv prob')
+            plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+            plt.ylim(0, 1)
+            plt.show()
+
+    if (np.shape(exp.key)[-1] == 2):
+        return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob, key0, key1
+    if (np.shape(exp.key)[-1] == 3):
+        return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob, key0, key1, key2
+    else:
+        return key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, popt, pcov
+
+def get_site_survival(exp, run, masks, t, crop=[0,None,0,None]):
+    data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+    loaddata = data[::2]
+    survdata = data[1::2]
+
+    surv_probs = []
+    surv_prob_uncertaintys = []
+
+    key = exp.key
+
+    for i in range(len(key)):
+        surv_prob = []
+        surv_prob_uncertainty = []
+        for m in range(len(masks)):
+            aa = 0
+            a = 0
+            for j in range(exp.reps):
+                atom1 = loaddata[i*exp.reps +j][m]
+                atom2 = survdata[i*exp.reps +j][m]
+                if (atom1 and atom2):
+                    aa += 1
+                if (atom1):
+                    a += 1
+            if np.sum(a):
+                p = np.sum(aa)/np.sum(a)
+                surv_prob.append(p)
+                if np.sum(aa):
+                    surv_prob_uncertainty.append(np.sqrt(p*(1-p)/a))
+                else:
+                    surv_prob_uncertainty.append(0)
+            else:
+                surv_prob.append(0)
+                surv_prob_uncertainty.append(0)
+
+        surv_probs.append(surv_prob)
+        surv_prob_uncertaintys.append(surv_prob_uncertainty)
+
+    key_sorted = np.sort(key)
+    surv_probs_sorted = np.array(surv_probs)[np.argsort(key),:]
+    surv_prob_uncertaintys_sorted = np.array(surv_prob_uncertaintys)[np.argsort(key),:]
+
+
+
+    return key_sorted, surv_probs_sorted, surv_prob_uncertaintys_sorted
+
+# picture_num = 0,1 for getting counts in first or second image
+def getCountsPerAtom(exp, run, masks, picture_num, threshold, sortkey=0, crop=[0,None,0,None]):
+    img_bin = get_binarized(exp, run, masks, threshold=threshold, crop=crop)
+    img_bin_1 = img_bin[::2]
+
+    cs_arr_2 = []
+
+    for m in masks:
+        sig = exp.pics[picture_num::2]
+        bkg = np.mean(exp.pics[picture_num::2, 0:7, 0:7], axis=(1,2))
+        diff = [np.subtract(sig[i], bkg[i]) for i in range(len(sig))]
+        cs = [np.sum(d) for d in diff*m]
+        cs_arr_2.append(cs)
+
+    cs_arr_cond = []
+    for i, img in enumerate(img_bin_1):
+        cs = 0
+        num_atoms = np.sum(img) # sum of img is number of atoms in the picture
+        for j, m in enumerate(img):
+            if m:
+                cs = cs + cs_arr_2[j][i]
+
+        # mean counts is total cs divided by number atoms
+        if (num_atoms > 0):
+            csmean = cs/num_atoms
+        else:
+            csmean = 0
+
+        # changing cs_arr_cond to be an array of mean atoms counts in each image
+        cs_arr_cond.append(csmean)
+
+    cs_arr_cond_sum = [np.sum(cs_arr_cond[i*exp.reps:(i+1)*exp.reps]) for i in range(len(exp.key))] # sum over reps for each variation
+    cs_arr_cond_mean = np.array(cs_arr_cond_sum)/(exp.reps) # average over reps for each variation
+    cs_arr_cond_sum_sorted = np.array(cs_arr_cond_sum)[np.argsort(exp.key)]
+    cs_arr_cond_mean_sorted = np.array(cs_arr_cond_mean)[np.argsort(exp.key)]
+    key_sorted = np.sort(exp.key)
+    #plt.plot(key_sorted, cs_arr_cond_sum_sorted)
+    plt.plot(key_sorted, cs_arr_cond_mean_sorted)
+    if (type(exp.key_name) == str):
+        plt.xlabel(exp.key_name)
+    else:
+        plt.xlabel(exp.key_name[sortkey])
+    plt.ylabel('mean single atom counts')
+    plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+
+    return key_sorted, cs_arr_cond_mean_sorted
+
+
 def newDay():
     """Creates a new notebook (and folder if missing) for current day, from the file that this funciton is called from."""
     src_dir = os.getcwd()
-    src_filename = src_dir.replace('A:\\','')+'.ipynb'
+    src_filename = src_dir.replace('A:\\Yb_data\\','')+'.ipynb'
 
     date_str = time.strftime('%y%m%d')
 #     date_str = '201112'
 
     try:
-        os.mkdir('../' + date_str)
+        os.mkdir('../Yb_' + date_str)
     except:
         print('Directory already exists, using preexisting directory.')
 
-    dest_dir = '../' + date_str
+    dest_dir = '../Yb_' + date_str
 
     src_file = os.path.join(src_dir, src_filename)
     shutil.copy(src_file,dest_dir) #copy the file to destination dir
 
     dst_file = os.path.join(dest_dir, src_filename)
-    new_dst_file_name = os.path.join(dest_dir, date_str+'.ipynb')
+    new_dst_file_name = os.path.join(dest_dir, 'Yb_'+date_str+'.ipynb')
 
     os.rename(dst_file, new_dst_file_name)#rename
+    # print(date_str, dest_dir, src_file, dst_file, new_dst_file_name)
 #     print(2)
+
+def cameraCountsToPhotons(counts, l=556, useOffset=True):
+    qe = exc.QE556
+    if (l==399):
+        qe = exc.QE399
+    if (useOffset == True):
+        offset = exc.offset
+    else:
+        offset = 0
+
+    return (counts - offset)*exc.CMOSsensitivity12bit/qe

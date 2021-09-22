@@ -133,8 +133,10 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
             dmax=ndi.filters.maximum_filter(mimg,filter_size)
 
             maxima = (mimg==dmax)
+
             diff = ((dmax-dmin)>threshold)
             maxima[diff == 0] = 0
+            maxima[diff != 0] = 1 #Aruku added to elminate the double count error
 
             labeled, num_objects = ndi.label(maxima)
             pts = np.array(ndi.center_of_mass(mimg, labeled, range(1, num_objects+1)))
