@@ -1743,7 +1743,8 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=[], crop=[0,Non
             if (plot):
                 key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
                 fig, ax = plt.subplots()
-                plt.plot(key_fine, fitFunc(key_fine, *popt), 'k-')
+                if (fitFunc != None):
+                    plt.plot(key_fine, fitFunc(key_fine, *popt), 'k-')
                 plt.errorbar(key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, color='k', marker='o', linestyle=':', alpha=0.7)
                 plt.xlabel(key_name)
                 plt.ylabel('surv prob')
