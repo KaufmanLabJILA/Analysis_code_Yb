@@ -40,8 +40,8 @@ class ExpFile:
         return self.f.close()
 
     def open_hdf5(self, fileID=None):
-        if (type(fileID) == int or type(fileID) == np.int32):
-            path = self.data_addr + "data_" + str(fileID) + ".h5"
+        if (type(fileID) == int or type(fileID) == np.int32 or type(fileID) == np.int64):
+            path = self.data_addr / ("data_" + str(fileID) + ".h5")
             print(path)
         else:
             # assume a file address itself

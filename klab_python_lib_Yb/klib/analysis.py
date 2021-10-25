@@ -1211,7 +1211,7 @@ def find_multiexperiment_threshold(dataAddress, runs, masks, threshold_guess = 2
     diffs = []
 
     for i, run in enumerate(runs):
-        exp = ExpFile(dataAddress+'Raw Data\\', run)
+        exp = ExpFile(dataAddress / 'Raw Data', run)
         bkg = (np.mean(exp.pics[:, :cut, :-cut]) + np.mean(exp.pics[:, :-cut, -cut:]) + np.mean(exp.pics[:, -cut:, cut:]) + np.mean(exp.pics[:, cut:, :cut]))/4
         sig = exp.pics[::2, crop[0]:crop[1], crop[2]:crop[3]]
         diff = sig-bkg
@@ -1771,7 +1771,7 @@ def get_multiexperiment_survival(dataAddress, runs, masks, tguess, crop=[0,None,
     scriptnames = []
     t = find_multiexperiment_threshold(dataAddress, runs[::2], masks, threshold_guess = tguess, bin_width = 1, fit=True, crop=crop, output=True)
     for run in runs:
-        exp = ExpFile(dataAddress+'Raw Data\\', run)
+        exp = ExpFile(dataAddress / 'Raw Data', run)
         loss, aa, av, va, vv, surv, surv_err = get_loss(exp, run, masks, t=t[0], sortkey=0, crop=crop, output=False)
         old_stdout = sys.stdout
         new_stdout = io.StringIO()
