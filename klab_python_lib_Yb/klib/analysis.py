@@ -1848,6 +1848,54 @@ def get_site_survival(exp, run, masks, t, crop=[0,None,0,None]):
 
     return surv_probs_sorted[0], surv_prob_uncertaintys_sorted[0]
 
+def get_rep_survival(exp, run, masks, t, crop=[0,None,0,None]):
+    data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+    loaddata = data[::2]
+    survdata = data[1::2]
+
+    surv_probs = []
+    surv_prob_uncertaintys = []
+
+    key = exp.key
+
+    for i in range(len(key)):
+        surv_prob = []
+        surv_prob_uncertainty = []
+        noloss = []
+        for j in range(exp.reps):
+            aa = 0
+            a = 0
+            for m in range(len(masks)):
+                atom1 = loaddata[i*exp.reps +j][m]
+                atom2 = survdata[i*exp.reps +j][m]
+                if (atom1 and atom2):
+                    aa += 1
+                if (atom1):
+                    a += 1
+
+            if np.sum(a):
+                p = np.sum(aa)/np.sum(a)
+                surv_prob.append(p)
+                if np.sum(aa):
+                    surv_prob_uncertainty.append(np.sqrt(p*(1-p)/a))
+                else:
+                    surv_prob_uncertainty.append(0)
+                if p == 1:
+                    noloss.append(j)
+            else:
+                surv_prob.append(0)
+                surv_prob_uncertainty.append(0)
+        print('100 percent survival for rep:', noloss)
+        surv_probs.append(surv_prob)
+        surv_prob_uncertaintys.append(surv_prob_uncertainty)
+
+    key_sorted = np.sort(key)
+    surv_probs_sorted = np.array(surv_probs)[np.argsort(key),:]
+    surv_prob_uncertaintys_sorted = np.array(surv_prob_uncertaintys)[np.argsort(key),:]
+
+    return surv_probs_sorted[0], surv_prob_uncertaintys_sorted[0]
+
+
 
 def get_site_load(exp, run, masks, t, crop=[0,None,0,None]):
     data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
@@ -1885,8 +1933,47 @@ def get_site_load(exp, run, masks, t, crop=[0,None,0,None]):
     load_probs_sorted = np.array(load_probs)[np.argsort(key),:]
     load_prob_uncertaintys_sorted = np.array(load_prob_uncertaintys)[np.argsort(key),:]
 
+    return key_sorted, load_probs_sorted, load_prob_uncertaintys_sorted
 
+def get_rep_load(exp, run, masks, t, crop=[0,None,0,None]):
+    data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
+    loaddata = data[::2]
 
+    load_probs = []
+    load_prob_uncertaintys = []
+
+    key = exp.key
+
+    for i in range(len(key)):
+        load_prob = []
+        load_prob_uncertainty = []
+        for j in range(exp.reps):
+            a = 0
+            for m in range(len(masks)):
+                atom1 = loaddata[i*exp.reps +j][m]
+                if (atom1):
+                    a += 1
+            if a:
+                p = a/len(masks)
+                load_prob.append(p)
+                if np.sum(a):
+                    load_prob_uncertainty.append(np.sqrt(p*(1-p)/len(masks)))
+                else:
+                    load_prob_uncertainty.append(0)
+                if p == 0.99:
+                    print('99 percent load for rep:', j)
+                if p == 1:
+                    print('100 percent load for rep:', j)
+            else:
+                load_prob.append(0)
+                load_prob_uncertainty.append(0)
+
+        load_probs.append(load_prob)
+        load_prob_uncertaintys.append(load_prob_uncertainty)
+
+    key_sorted = np.sort(key)
+    load_probs_sorted = np.array(load_probs)[np.argsort(key),:]
+    load_prob_uncertaintys_sorted = np.array(load_prob_uncertaintys)[np.argsort(key),:]
 
     return key_sorted, load_probs_sorted, load_prob_uncertaintys_sorted
 
