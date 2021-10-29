@@ -45,7 +45,7 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
         fimgArg = np.angle(fimg)
 
         # fimgMax = ndi.maximum_filter(fimg, size = 100, mode = 'constant')
-        fMaxCoord = peak_local_max(fimgAbs, min_distance=mindist, threshold_rel=.1)
+        fMaxCoord = peak_local_max(fimgAbs, min_distance=mindist, threshold_rel=.3)
         # fMaxBool = peak_local_max(fimgAbs, min_distance=100, threshold_rel=.1, num_peaks = 4, indices=False)
 
         fMaxCoord = fMaxCoord[fMaxCoord[:,0]-fftN/2>-fftN/20] # Restrict to positive quadrant
@@ -58,8 +58,8 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
     #     ysort = np.argsort(fMaxCoord[:,1])
     #     xsort = np.argsort(fMaxCoord[:,0])
 
-        xsort = np.argsort(fMaxCoord[:,1]+fMaxCoord[:,0]/2)
-        ysort = np.argsort(fMaxCoord[:,0]+fMaxCoord[:,1]/2)
+        xsort = np.argsort(fMaxCoord[:,1]+fMaxCoord[:,0]/5)
+        ysort = np.argsort(fMaxCoord[:,0]+fMaxCoord[:,1]/5)
 
         xpeak, ypeak = fMaxCoord[xsort[0]], fMaxCoord[ysort[0]]
 
@@ -68,6 +68,7 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
     #     print(ysort)
         if output == True:
             plt.imshow(fimgAbs)
+            plt.colorbar()
             plt.plot(fMaxCoord[:,1], fMaxCoord[:,0],'g.')
             # plt.plot([xpeak[0], ypeak[0]],[xpeak[1],ypeak[1]],'r.')
 

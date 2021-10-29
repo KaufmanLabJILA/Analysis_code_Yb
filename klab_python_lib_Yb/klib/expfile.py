@@ -40,8 +40,8 @@ class ExpFile:
         return self.f.close()
 
     def open_hdf5(self, fileID=None):
-        if type(fileID) == int:
-            path = self.data_addr + "data_" + str(fileID) + ".h5"
+        if (type(fileID) == int or type(fileID) == np.int32 or type(fileID) == np.int64):
+            path = self.data_addr / ("data_" + str(fileID) + ".h5")
             print(path)
         else:
             # assume a file address itself
@@ -171,9 +171,8 @@ class ExpFile:
         # A shortcut
         self.print_script(self.f['Master-Parameters']['Master-Script'])
 
-#     def print_niawg_script(self):
-#         # A shortcut
-#         self.print_script(self.f['NIAWG']['Seq. 1 NIAWG-Script'])
+    def print_master_script_name(self):
+        self.__print_ds(self.f['Master-Parameters']['Master-Script-File-Address'], "")
 
     def print_variables(self):
         self.__print_hdf5_obj(self.f['Master-Parameters']['Variables'],'')

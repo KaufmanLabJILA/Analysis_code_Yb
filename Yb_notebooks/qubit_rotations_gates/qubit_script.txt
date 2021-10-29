@@ -1,0 +1,258 @@
+t = 1
+%
+
+on: scopetrigger
+off: imageshutter
+t += 1
+on: pushbeam
+on: blue3dmot
+on: tweezeraod
+on: blue2dmotshutter
+on: blue3dmotshutter
+on: greenshutter
+off: eitshutter
+off: op
+off: rb1
+off: rb2
+off: rb3
+on: gm1 
+on: gm2 
+off: qb
+dac: tweezerdepth 5.84
+t += 1
+
+%dacramp: dac0 0.1 -1 10
+
+dac: motcoil bluemotcoil
+t += 1
+dac: z1coil bluez %zbias %
+dac: z2coil -bluez %-zbias %
+t += 1
+dac: x1coil bluex %xbias %
+dac: x2coil -bluex %-xbias %
+t += 1
+dac: y1coil bluey %ybias %
+dac: y2coil -bluey %-ybias %
+
+ddsfreq: dds0 rb4freq1
+ddsfreq: dds4 83 %greenimage
+ddsfreq: dds8 greennarrowfreq %greennarrowfreq %green single freq
+t += 5
+ddsamp: dds0 rb4power
+ddsamp: dds4 10
+ddsamp: dds8 greennarrowpowerstart 
+t += 5
+ddsfreq: dds1 100 %rb1
+ddsfreq: dds5 qubitpumpfreq %op
+ddsfreq: dds9 80 %AOD servo
+t += 5
+ddsamp: dds1 sbcoolpower
+ddsamp: dds5 qubitpumpamp
+ddsamp: dds9 100
+t += 5
+ddsfreq: dds2 rb2freq1 %rb2
+ddsfreq: dds6 bluefreq  %blue image
+ddsfreq: dds10 100 %qb
+t += 5
+ddsamp: dds2 sbcoolpower
+ddsamp: dds6 bluepower
+ddsamp: dds10 80 %qb1
+t += 5
+ddsfreq: dds3 rb3freq1 %rb3
+ddsfreq: dds7 100 %qb
+ddsfreq: dds11 freq %qb2
+t += 5
+ddsamp: dds3 rb3power
+ddsamp: dds7 100
+ddsamp: dds11 100
+
+t += 200 %blueloadtime
+
+on: mot3dcamera
+%
+t += 0.15
+%
+off: mot3dcamera
+
+off: pushbeam %push beam off
+off: blue3dmot
+off: blue3dmotshutter
+off: blue2dmotshutter
+on: greenbroad % green on
+
+t += 0.01
+dac: motcoil greenmotcoil
+%dacramp: motcoil 2.499 0.4 20 %MOT
+t += 0.01
+dac: x1coil   xbias %greenx %
+dac: x2coil -xbias %-greenx %
+t += 0.01
+dac: y1coil  ybias %greeny % 
+dac: y2coil   -ybias %-greeny %
+t += 0.01
+dac: z1coil zbias %greenz %   
+dac: z2coil  -zbias %-greenz %
+t += greenbroadloadtime
+
+off: greenbroad 
+on: greennarrow
+
+ddsrampamp: dds8 greennarrowpowerstart greennarrowpower 15
+
+pulseon: gmload 0.0001
+
+t += greennarrowloadtime
+
+
+off: greennarrow 
+dac: motcoil 0
+t += 0.01
+dac: x1coil 0.08
+dac: x2coil -0.08
+t += 0.01
+dac: y1coil 0.01
+dac: y2coil -0.01
+t += 0.01
+dac: z1coil -0.1
+dac: z2coil 0.1
+
+t += 30
+
+%on: greenimage %for light assisted collisions
+t += .1
+ddsfreq: dds8 lacfreq %cooling 82.7
+t += 2
+ddsamp: dds8 lacpower
+t += 2
+on: greennarrow
+t += lactime
+off: greennarrow
+
+t += .1
+ddsfreq: dds8 coolfreq %cooling 82.7
+t += 2
+ddsamp: dds8 coolpower
+t += 2
+
+on: greennarrow
+t += cooltime
+
+on: imageshutter
+t += 5
+
+on: cameratrig
+t += 1 %to initiate all pixels exposing
+
+on: eitshutter
+t += 1
+on: blueimage
+t += bluetime
+off: blueimage
+off: eitshutter
+off: greennarrow
+
+t += 1
+off: cameratrig
+off: imageshutter
+
+ddsfreq: dds8 precoolfreq %cooling 82.7
+t += 2
+ddsamp: dds8 precoolpower
+t += 2
+
+on: greennarrow
+t += cooltime
+off: greennarrow
+
+
+dacramp: tweezerdepth 5.84 0.8 20
+t += 20
+
+dac: x1coil 4
+dac: x2coil -4
+t += 0.01
+dac: y1coil 0.01
+dac: y2coil -0.01
+t += 0.01
+dac: z1coil -0.1
+dac: z2coil 0.1
+t += 12
+
+on: op 
+t += qubitpumptime
+off: op 
+
+t += 0.01
+
+off: greenshutter
+
+dacramp: x1coil 4 xbiasqb 10
+dacramp: x2coil -4 -xbiasqb 10
+t += 12
+
+%STARTQUBIT
+
+
+%STOPQUBIT
+
+t += .01
+
+dacramp: x1coil xbiasqb 4 10
+dacramp: x2coil -xbiasqb -4 10
+t += 12
+
+on: greenshutter
+ddsamp: dds5 qubitblowawayamp
+t += 2 
+ddsfreq: dds5 qubitblowawayfreq
+t += 3
+
+on: op
+%off: tweezeraod
+t += qubitblowawaytime
+%on: tweezeraod
+off: op
+t += 0.01
+
+dac: x1coil 0.08
+dac: x2coil -0.08
+t += 0.01
+dac: y1coil 0.01
+dac: y2coil -0.01
+t += 0.01
+dac: z1coil -0.1
+dac: z2coil 0.1
+t += 12
+
+dacramp: tweezerdepth 0.8 5.84 20
+t += 22
+
+on: greennarrow
+t += cooltime
+
+on: imageshutter
+t += 5
+
+on: cameratrig
+t += 1 %to initiate all pixels exposing
+
+on: eitshutter
+t += 1
+on: blueimage
+t += bluetime
+off: blueimage
+off: eitshutter
+off: greennarrow
+
+t += 1
+off: cameratrig
+off: imageshutter
+
+off: tweezeraod
+off: gm1 
+off: gm2 
+
+t += 10
+
+
+off: scopetrigger
