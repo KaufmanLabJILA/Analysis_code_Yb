@@ -71,7 +71,7 @@ def expfit(t, A, tau):
     return A*np.exp(-t/tau)
 
 def cos(t, f, A, phi, y0):
-    return abs(A)*np.cos(2*np.pi*f*t+phi) + y0
+    return abs(A/2)*np.cos(2*np.pi*f*t+phi) + y0
 
 def sinc2(x, x0, a0, y0, k0):
     return a0*np.sinc((x-x0)/k0)**2 + y0

@@ -989,7 +989,7 @@ def var_scan_atom_sumcounts(exp, run, masks, threshold):
     plt.plot(key_sorted, a_cs_ls_sorted, 'ko', alpha=0.7)
     plt.xlabel(exp.key_name)
     plt.ylabel('mean atom counts')
-    plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+    plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
     plt.show()
 
 
@@ -1047,7 +1047,7 @@ def var_scan_sumcounts(exp, run, masks, fit='none'):
     plt.plot(key_sorted, cs_ls_sorted, 'ko', alpha=0.7)
     plt.xlabel(exp.key_name)
     plt.ylabel('summed counts')
-    plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+    plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
     plt.show()
 
 def gaussian(x, *p):
@@ -1182,7 +1182,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, fit = T
         plt.ylabel('Events')
         plt.ylim(0, )
         plt.legend()
-        plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+        plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
         plt.show()
 
         if (fit and fit_worked):
@@ -1211,7 +1211,7 @@ def find_multiexperiment_threshold(dataAddress, runs, masks, threshold_guess = 2
     diffs = []
 
     for i, run in enumerate(runs):
-        exp = ExpFile(dataAddress+'Raw Data\\', run)
+        exp = ExpFile(dataAddress / 'Raw Data', run)
         bkg = (np.mean(exp.pics[:, :cut, :-cut]) + np.mean(exp.pics[:, :-cut, -cut:]) + np.mean(exp.pics[:, -cut:, cut:]) + np.mean(exp.pics[:, cut:, :cut]))/4
         sig = exp.pics[::2, crop[0]:crop[1], crop[2]:crop[3]]
         diff = sig-bkg
@@ -1289,7 +1289,7 @@ def find_multiexperiment_threshold(dataAddress, runs, masks, threshold_guess = 2
         plt.ylabel('Events')
         plt.ylim(0, )
         plt.legend()
-        plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+        plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
         plt.show()
 
         if (fit and fit_worked):
@@ -1380,7 +1380,7 @@ def var_scan_loadprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
         plt.ylabel(exp.key_name[0])
         cbar = plt.colorbar(im)
         cbar.ax.set_ylabel('load_prob')
-        plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+        plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
         plt.show()
 
 
@@ -1445,7 +1445,7 @@ def var_scan_loadprob(exp, run, masks, t=30, fit='none', sortkey=0, crop=[0,None
         else:
             plt.xlabel(exp.key_name[sortkey])
         plt.ylabel('load prob')
-        plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+        plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
         plt.ylim(0, 1)
         plt.show()
 
@@ -1574,7 +1574,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=[], crop=[0,Non
             plt.ylabel(key_name[0])
             cbar = plt.colorbar(im)
             cbar.ax.set_ylabel('surv_prob')
-            plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+            plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
             plt.show()
 
     if (np.shape(key)[-1] == 3):
@@ -1703,6 +1703,15 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=[], crop=[0,Non
                 fitFunc = dampedCos
                 print('f, tau: %.4e, %.4e' %(popt[2], popt[1]))
 
+            if fit == 'cos':
+                # dampedCos(t, A, tau, f, phi, y0): A*np.exp(-t/tau)/2 * (np.cos(2*np.pi*f*t+phi)) + y0
+                if (pguess == None):
+                    pguess = [1/((key_sorted[-1]-key_sorted[-1])), np.max(surv_prob_sorted)-np.min(surv_prob_sorted), 0, 0.5]
+                popt, pcov = curve_fit(cos, key_sorted, surv_prob_sorted, p0=pguess)
+                fitFunc = cos
+                print('f, A, phi, y0')
+                print(popt)
+
             if fit == 'gausCos':
                 #gausCos(t, A, sig, f, phi, y0):(A/2)*np.exp(-(t/sig)**2/2) * (np.cos(2*np.pi*f*t+phi)) + y0
                 if (pguess == None):
@@ -1748,7 +1757,7 @@ def var_scan_survprob(exp, run, masks, t=30, fit='none', sortkey=[], crop=[0,Non
                 plt.errorbar(key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, color='k', marker='o', linestyle=':', alpha=0.7)
                 plt.xlabel(key_name)
                 plt.ylabel('surv prob')
-                plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+                plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
                 if (fullscale):
                     plt.ylim(0, 1)
                 plt.show()
@@ -1771,7 +1780,7 @@ def get_multiexperiment_survival(dataAddress, runs, masks, tguess, crop=[0,None,
     scriptnames = []
     t = find_multiexperiment_threshold(dataAddress, runs[::2], masks, threshold_guess = tguess, bin_width = 1, fit=True, crop=crop, output=True)
     for run in runs:
-        exp = ExpFile(dataAddress+'Raw Data\\', run)
+        exp = ExpFile(dataAddress / 'Raw Data', run)
         loss, aa, av, va, vv, surv, surv_err = get_loss(exp, run, masks, t=t[0], sortkey=0, crop=crop, output=False)
         old_stdout = sys.stdout
         new_stdout = io.StringIO()
@@ -1924,7 +1933,7 @@ def getCountsPerAtom(exp, run, masks, picture_num, threshold, sortkey=0, crop=[0
     else:
         plt.xlabel(exp.key_name[sortkey])
     plt.ylabel('mean single atom counts')
-    plt.title(exp.data_addr + "data_" + str(run) + ".h5")
+    plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
 
     return key_sorted, cs_arr_cond_mean_sorted
 

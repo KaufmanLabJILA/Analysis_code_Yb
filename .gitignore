@@ -1,0 +1,17 @@
+#ignore file
+
+#master scripts
+*.mScript
+
+# gst html files
+exampleReport/
+offline/
+
+# notebook checkpoints
+.ipynb_checkpoints/
+
+test_gst_dir/
+
+*.pyc
+
+klab_python_lib_Yb/klib/__pycache__/
