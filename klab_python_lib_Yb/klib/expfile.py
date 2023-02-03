@@ -174,6 +174,9 @@ class ExpFile:
     def print_master_script_name(self):
         self.__print_ds(self.f['Master-Parameters']['Master-Script-File-Address'], "")
 
+    def print_awg_script_name(self):
+        self.__print_ds(self.f['AWG-Parameters']['AWG-Script-File-Address'], "")
+
     def print_variables(self):
         self.__print_hdf5_obj(self.f['Master-Parameters']['Variables'],'')
 

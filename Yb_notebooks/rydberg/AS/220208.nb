@@ -1,0 +1,1019 @@
+(* Content-type: application/vnd.wolfram.mathematica *)
+
+(*** Wolfram Notebook File ***)
+(* http://www.wolfram.com/nb *)
+
+(* CreatedBy='Mathematica 10.2' *)
+
+(*CacheID: 234*)
+(* Internal cache information:
+NotebookFileLineBreakTest
+NotebookFileLineBreakTest
+NotebookDataPosition[       158,          7]
+NotebookDataLength[     41228,       1009]
+NotebookOptionsPosition[     39636,        951]
+NotebookOutlinePosition[     40276,        976]
+CellTagsIndexPosition[     40233,        973]
+WindowTitle->Coulomb Wavefunctions - Source
+WindowFrame->Normal*)
+
+(* Beginning of Notebook Content *)
+Notebook[{
+
+Cell[CellGroupData[{
+Cell["Coulomb Wavefunctions", "Section",
+ CellFrame->{{0, 0}, {0, 0}},
+ ShowCellBracket->False,
+ FontColor->RGBColor[0.597406, 0, 0.0527047]],
+
+Cell[BoxData[
+ GraphicsBox[RasterBox[CompressedData["
+1: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
+AAAAAAAAgI3xP5e3Sto=
+   "], {{0, 0}, {1800, 25}}, {0, 255},
+   ColorFunction->RGBColor],
+  ImageSize->{1800, 25},
+  PlotRange->{{0, 1800}, {0, 25}}]], "Section",
+ CellFrame->{{0, 0}, {0, 0}},
+ ShowCellBracket->False],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"CoulombPhase", "[", 
+    RowBox[{"\[ScriptL]_", ",", "\[Eta]_"}], "]"}], ":=", 
+   FractionBox[
+    RowBox[{
+     RowBox[{"LogGamma", "[", 
+      RowBox[{"\[ScriptL]", "+", 
+       RowBox[{"\[ImaginaryI]", " ", "\[Eta]"}], "+", "1"}], "]"}], "-", 
+     RowBox[{"LogGamma", "[", 
+      RowBox[{"\[ScriptL]", "-", 
+       RowBox[{"\[ImaginaryI]", " ", "\[Eta]"}], "+", "1"}], "]"}]}], 
+    RowBox[{"2", " ", "\[ImaginaryI]"}]]}], ";"}], "\n", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"CoulombHPlus", "[", 
+    RowBox[{"\[ScriptL]_", ",", "\[Eta]_", ",", "\[Rho]_"}], "]"}], ":=", 
+   RowBox[{
+    RowBox[{"WhittakerW", "[", 
+     RowBox[{
+      RowBox[{
+       RowBox[{"-", "\[ImaginaryI]"}], " ", "\[Eta]"}], ",", 
+      RowBox[{"\[ScriptL]", "+", 
+       FractionBox["1", "2"]}], ",", 
+      RowBox[{
+       RowBox[{"-", "2"}], " ", "\[ImaginaryI]", " ", "\[Rho]"}]}], "]"}], 
+    " ", 
+    SuperscriptBox["\[ExponentialE]", 
+     RowBox[{
+      RowBox[{"\[ImaginaryI]", " ", 
+       RowBox[{"CoulombPhase", "[", 
+        RowBox[{"\[ScriptL]", ",", "\[Eta]"}], "]"}]}], "+", 
+      RowBox[{
+       FractionBox["1", "2"], " ", "\[Pi]", " ", 
+       RowBox[{"(", 
+        RowBox[{"\[Eta]", "-", 
+         RowBox[{"\[ImaginaryI]", " ", "\[ScriptL]"}]}], ")"}]}]}]]}]}], 
+  ";"}], "\n", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"CoulombHMinus", "[", 
+    RowBox[{"\[ScriptL]_", ",", "\[Eta]_", ",", "\[Rho]_"}], "]"}], ":=", 
+   RowBox[{
+    RowBox[{"WhittakerW", "[", 
+     RowBox[{
+      RowBox[{"\[ImaginaryI]", " ", "\[Eta]"}], ",", 
+      RowBox[{"\[ScriptL]", "+", 
+       FractionBox["1", "2"]}], ",", 
+      RowBox[{"2", " ", "\[ImaginaryI]", " ", "\[Rho]"}]}], "]"}], " ", 
+    SuperscriptBox["\[ExponentialE]", 
+     RowBox[{
+      RowBox[{
+       FractionBox["1", "2"], " ", "\[Pi]", " ", 
+       RowBox[{"(", 
+        RowBox[{"\[Eta]", "+", 
+         RowBox[{"\[ImaginaryI]", " ", "\[ScriptL]"}]}], ")"}]}], "-", 
+      RowBox[{"\[ImaginaryI]", " ", 
+       RowBox[{"CoulombPhase", "[", 
+        RowBox[{"\[ScriptL]", ",", "\[Eta]"}], "]"}]}]}]]}]}], 
+  ";"}]}], "Input",
+ InitializationCell->True,
+ CellChangeTimes->{{3.604846524364624*^9, 3.604846524366083*^9}, 
+   3.6048469393389397`*^9, 3.615289981704183*^9, 3.6157356214721584`*^9, {
+   3.6161528233036075`*^9, 3.616152825667844*^9}},
+ CellID->814115294],
+
+Cell[BoxData[{
+ RowBox[{
+  RowBox[{
+   RowBox[{"CoulombFactor", "[", 
+    RowBox[{"\[ScriptL]_", ",", "\[Eta]_"}], "]"}], ":=", 
+   FractionBox[
+    RowBox[{
+     SuperscriptBox["\[ExponentialE]", 
+      RowBox[{
+       FractionBox["1", "2"], " ", 
+       RowBox[{"(", 
+        RowBox[{"-", "\[Pi]"}], ")"}], " ", 
+       RowBox[{"(", 
+        RowBox[{"\[Eta]", "+", 
+         RowBox[{"\[ImaginaryI]", " ", 
+          RowBox[{"(", 
+           RowBox[{"\[ScriptL]", "+", "1"}], ")"}]}]}], ")"}]}]], " ", 
+     SqrtBox[
+      RowBox[{
+       RowBox[{"Gamma", "[", 
+        RowBox[{"\[ScriptL]", "-", 
+         RowBox[{"\[ImaginaryI]", " ", "\[Eta]"}], "+", "1"}], "]"}], " ", 
+       RowBox[{"Gamma", "[", 
+        RowBox[{"\[ScriptL]", "+", 
+         RowBox[{"\[ImaginaryI]", " ", "\[Eta]"}], "+", "1"}], "]"}]}]]}], 
+    RowBox[{"2", " ", 
+     RowBox[{
+      RowBox[{"(", 
+       RowBox[{
+        RowBox[{"2", " ", "\[ScriptL]"}], "+", "1"}], ")"}], "!"}]}]]}], 
+  ";"}], "\n", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"CoulombF", "[", 
+    RowBox[{"\[ScriptL]_", ",", "\[Eta]_", ",", "\[Rho]_"}], "]"}], ":=", 
+   RowBox[{
+    RowBox[{"CoulombFactor", "[", 
+     RowBox[{"\[ScriptL]", ",", "\[Eta]"}], "]"}], " ", 
+    RowBox[{"WhittakerM", "[", 
+     RowBox[{
+      RowBox[{"\[ImaginaryI]", " ", "\[Eta]"}], ",", 
+      RowBox[{"\[ScriptL]", "+", 
+       FractionBox["1", "2"]}], ",", 
+      RowBox[{"2", " ", "\[ImaginaryI]", " ", "\[Rho]"}]}], "]"}]}]}], 
+  ";"}], "\n", 
+ RowBox[{
+  RowBox[{
+   RowBox[{"CoulombG", "[", 
+    RowBox[{"\[ScriptL]_", ",", "\[Eta]_", ",", "\[Rho]_"}], "]"}], ":=", 
+   RowBox[{
+    FractionBox["1", "2"], " ", 
+    RowBox[{"(", 
+     RowBox[{
+      RowBox[{"CoulombHMinus", "[", 
+       RowBox[{"\[ScriptL]", ",", "\[Eta]", ",", "\[Rho]"}], "]"}], "+", 
+      RowBox[{"CoulombHPlus", "[", 
+       RowBox[{"\[ScriptL]", ",", "\[Eta]", ",", "\[Rho]"}], "]"}]}], 
+     ")"}]}]}], ";"}]}], "Input",
+ InitializationCell->True,
+ CellChangeTimes->{{3.604846535951747*^9, 3.604846535952963*^9}, 
+   3.6048469394701443`*^9, 3.615289981882249*^9, 3.6157356214861593`*^9, {
+   3.6161528268699636`*^9, 3.616152828371114*^9}},
+ CellID->142342731],
+
+Cell[BoxData[
+ RowBox[{"Manipulate", "[", "\[IndentingNewLine]", 
+  RowBox[{
+   RowBox[{"Which", "[", 
+    RowBox[{
+     RowBox[{"view", "\[Equal]", "\"\<2D\>\""}], ",", "\[IndentingNewLine]", 
+     RowBox[{"Plot", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", 
+        RowBox[{
+         RowBox[{"If", "[", 
+          RowBox[{
+           RowBox[{"ff", "===", "CoulombHPlus"}], ",", "Abs", ",", 
+           "Identity"}], "]"}], "@", 
+         RowBox[{"ff", "[", 
+          RowBox[{"\[ScriptL]", ",", "\[Eta]", ",", "\[Rho]"}], "]"}]}], 
+        "]"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"\[Rho]", ",", 
+         RowBox[{"-", "10."}], ",", "30"}], "}"}], ",", 
+       RowBox[{"PlotRange", "\[Rule]", 
+        RowBox[{"{", 
+         RowBox[{"Automatic", ",", 
+          RowBox[{"{", 
+           RowBox[{
+            RowBox[{"-", "2"}], ",", "5"}], "}"}]}], "}"}]}], ",", 
+       RowBox[{"ImageSize", "\[Rule]", 
+        RowBox[{"{", 
+         RowBox[{"430", ",", "430"}], "}"}]}], ",", 
+       RowBox[{"PlotPoints", "\[Rule]", "35"}]}], "]"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"view", "\[Equal]", "\"\<3D\>\""}], ",", "\[IndentingNewLine]", 
+     RowBox[{"Plot3D", "[", 
+      RowBox[{
+       RowBox[{"Evaluate", "[", 
+        RowBox[{
+         RowBox[{"If", "[", 
+          RowBox[{
+           RowBox[{"ff", "===", "CoulombHPlus"}], ",", "Abs", ",", 
+           "Identity"}], "]"}], "@", 
+         RowBox[{"ff", "[", 
+          RowBox[{"\[ScriptL]", ",", "\[Eta]2", ",", "\[Rho]"}], "]"}]}], 
+        "]"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"\[Rho]", ",", 
+         RowBox[{"-", "15"}], ",", "15"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"\[Eta]2", ",", 
+         RowBox[{"-", "2"}], ",", "2"}], "}"}], ",", 
+       RowBox[{"ImageSize", "\[Rule]", 
+        RowBox[{"{", 
+         RowBox[{"430", ",", "430"}], "}"}]}], ",", 
+       RowBox[{"PlotPoints", "\[Rule]", "50"}]}], "]"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"view", "\[Equal]", "\"\<density\>\""}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"DensityPlot", "[", 
+      RowBox[{
+       RowBox[{"ff", "[", 
+        RowBox[{"\[ScriptL]", ",", "\[Eta]2", ",", "\[Rho]"}], "]"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"\[Rho]", ",", 
+         RowBox[{"-", "15"}], ",", "15"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"\[Eta]2", ",", 
+         RowBox[{"-", "2"}], ",", "2"}], "}"}], ",", 
+       RowBox[{"ImageSize", "\[Rule]", "430"}], ",", 
+       RowBox[{"PlotPoints", "\[Rule]", "35"}], ",", 
+       RowBox[{"ClippingStyle", "\[Rule]", "Automatic"}]}], "]"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"view", "\[Equal]", "\"\<contour\>\""}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"ContourPlot", "[", 
+      RowBox[{
+       RowBox[{"ff", "[", 
+        RowBox[{"\[ScriptL]", ",", "\[Eta]2", ",", "\[Rho]"}], "]"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"\[Rho]", ",", 
+         RowBox[{"-", "15"}], ",", "15"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"\[Eta]2", ",", 
+         RowBox[{"-", "2"}], ",", "2"}], "}"}], ",", 
+       RowBox[{"ImageSize", "\[Rule]", "430"}], ",", 
+       RowBox[{"PlotRange", "\[Rule]", "Automatic"}], ",", 
+       RowBox[{"PlotPoints", "\[Rule]", "35"}], ",", 
+       RowBox[{"ClippingStyle", "\[Rule]", "Automatic"}]}], "]"}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"view", "\[Equal]", "\"\<complex\>\""}], ",", 
+     "\[IndentingNewLine]", 
+     RowBox[{"DensityPlot", "[", 
+      RowBox[{
+       RowBox[{"complex", "@", 
+        RowBox[{"ff", "[", 
+         RowBox[{"1", ",", "1", ",", 
+          RowBox[{"x", "+", 
+           RowBox[{"I", " ", "y"}]}]}], "]"}]}], ",", 
+       RowBox[{"{", 
+        RowBox[{"x", ",", 
+         RowBox[{"-", "5"}], ",", "5"}], "}"}], ",", 
+       RowBox[{"{", 
+        RowBox[{"y", ",", 
+         RowBox[{"-", "5"}], ",", "5"}], "}"}], ",", 
+       RowBox[{"ImageSize", "\[Rule]", "430"}], ",", 
+       RowBox[{"ColorFunction", "\[Rule]", "\"\<Pastel\>\""}], ",", 
+       RowBox[{"ClippingStyle", "\[Rule]", "Automatic"}], ",", 
+       RowBox[{"MeshFunctions", "\[Rule]", 
+        RowBox[{"Function", "@@@", 
+         RowBox[{"{", 
+          RowBox[{
+           RowBox[{"{", 
+            RowBox[{
+             RowBox[{"{", 
+              RowBox[{"x", ",", "y", ",", "z"}], "}"}], ",", 
+             RowBox[{"Re", "[", 
+              RowBox[{"complex", "@", 
+               RowBox[{"ff", "[", 
+                RowBox[{"1", ",", "1", ",", 
+                 RowBox[{"x", "+", 
+                  RowBox[{"I", " ", "y"}]}]}], "]"}]}], "]"}]}], "}"}], ",", 
+           RowBox[{"{", 
+            RowBox[{
+             RowBox[{"{", 
+              RowBox[{"x", ",", "y", ",", "z"}], "}"}], ",", 
+             RowBox[{"Im", "[", 
+              RowBox[{"complex", "@", 
+               RowBox[{"ff", "[", 
+                RowBox[{"1", ",", "1", ",", 
+                 RowBox[{"x", "+", 
+                  RowBox[{"I", " ", "y"}]}]}], "]"}]}], "]"}]}], "}"}]}], 
+          "}"}]}]}], ",", 
+       RowBox[{"Mesh", "\[Rule]", "10"}], ",", 
+       RowBox[{"ExclusionsStyle", "\[Rule]", 
+        RowBox[{"Lighter", "@", "Blue"}]}]}], "]"}]}], "]"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"ff", ",", "CoulombG", ",", "\"\<function\>\""}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"CoulombF", ",", "CoulombG", ",", "CoulombHPlus"}], "}"}], ",", 
+     
+     RowBox[{"ControlPlacement", "\[Rule]", "Top"}]}], "}"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"\[ScriptL]", ",", "1"}], "}"}], ",", "0", ",", "10", ",", "1", 
+     ",", 
+     RowBox[{"ImageSize", "->", "Tiny"}], ",", 
+     RowBox[{"Appearance", "\[Rule]", "\"\<Labeled\>\""}], ",", 
+     RowBox[{"Enabled", ":>", 
+      RowBox[{
+       RowBox[{"view", "!"}], "\[Equal]", "\"\<complex\>\""}]}]}], "}"}], ",",
+    "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"\[Eta]", ",", ".5"}], "}"}], ",", "0.", ",", "10.", ",", 
+     RowBox[{"ImageSize", "->", "Tiny"}], ",", 
+     RowBox[{"Appearance", "\[Rule]", "\"\<Labeled\>\""}], ",", 
+     RowBox[{"Enabled", ":>", 
+      RowBox[{"view", "==", "\"\<2D\>\""}]}]}], "}"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"view", ",", "\"\<2D\>\""}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{
+      "\"\<2D\>\"", ",", "\"\<3D\>\"", ",", "\"\<density\>\"", ",", 
+       "\"\<contour\>\"", ",", "\"\<complex\>\""}], "}"}], ",", 
+     RowBox[{"ControlType", "\[Rule]", "PopupMenu"}]}], "}"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"{", 
+    RowBox[{
+     RowBox[{"{", 
+      RowBox[{"complex", ",", "Re", ",", 
+       RowBox[{"Text", "@", 
+        RowBox[{"Style", "[", 
+         RowBox[{"\"\<f\>\"", ",", "Italic"}], "]"}]}]}], "}"}], ",", 
+     RowBox[{"{", 
+      RowBox[{"Re", ",", "Im", ",", "Abs", ",", "Arg"}], "}"}], ",", 
+     RowBox[{"ControlType", "\[Rule]", "PopupMenu"}], ",", 
+     RowBox[{"Enabled", "\[RuleDelayed]", 
+      RowBox[{"view", "==", "\"\<complex\>\""}]}]}], "}"}], ",", 
+   RowBox[{"ControlPlacement", "\[Rule]", "Left"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"SaveDefinitions", "\[Rule]", "True"}], ",", "\[IndentingNewLine]", 
+   RowBox[{"TrackedSymbols", "\[RuleDelayed]", " ", 
+    RowBox[{"{", 
+     RowBox[{
+     "f", ",", " ", "\[ScriptL]", ",", " ", "\[Eta]", ",", " ", "view", ",", 
+      " ", "complex"}], "}"}]}], ",", "\[IndentingNewLine]", 
+   RowBox[{"SynchronousUpdating", "\[Rule]", "False"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"SynchronousInitialization", "\[Rule]", "False"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"ContinuousAction", "\[Rule]", "False"}], ",", 
+   "\[IndentingNewLine]", 
+   RowBox[{"AutorunSequencing", "\[Rule]", 
+    RowBox[{"{", "1", "}"}]}]}], "]"}]], "Input",
+ CellChangeTimes->{
+  3.60484695087094*^9, {3.6157385647475533`*^9, 3.6157387398195667`*^9}, {
+   3.6157391623877363`*^9, 3.6157391815998354`*^9}, {3.615740977963277*^9, 
+   3.615741004793812*^9}, {3.6157410350185404`*^9, 3.615741099208212*^9}, {
+   3.61574123659207*^9, 3.6157412715440693`*^9}, {3.615741320201852*^9, 
+   3.6157413240630727`*^9}, 3.615741376689083*^9, 3.6157414116000795`*^9, {
+   3.615741617421852*^9, 3.615741638412053*^9}, {3.615742361770178*^9, 
+   3.6157423620781956`*^9}, 3.615742442193778*^9, {3.6157553934244657`*^9, 
+   3.615755500471588*^9}, {3.6157555304803047`*^9, 3.61575555818989*^9}, {
+   3.615755669074232*^9, 3.6157556924415684`*^9}, {3.615755735874053*^9, 
+   3.615755998732087*^9}, {3.615756086861128*^9, 3.6157561230031953`*^9}, {
+   3.615756207978056*^9, 3.6157562123283043`*^9}, {3.615757206403162*^9, 
+   3.6157572123175*^9}, {3.615757247262499*^9, 3.6157572679096804`*^9}, {
+   3.61575730078456*^9, 3.615757335898569*^9}, {3.6157577864893413`*^9, 
+   3.6157577952388415`*^9}, {3.6157580114142065`*^9, 
+   3.6157580329174356`*^9}, {3.6157583656364665`*^9, 3.615758366430512*^9}, {
+   3.61575860102093*^9, 3.6157586045641327`*^9}, {3.6157588085848017`*^9, 
+   3.615758808818815*^9}, {3.615759827669035*^9, 3.615759932255017*^9}, {
+   3.6157599672190166`*^9, 3.615759973409371*^9}, {3.6157600125516095`*^9, 
+   3.6157600142497063`*^9}, {3.6157602526617656`*^9, 
+   3.6157602543758636`*^9}, {3.615760487010168*^9, 3.615760492303471*^9}, {
+   3.615760552273901*^9, 3.615760553785988*^9}, {3.615760591957171*^9, 
+   3.6157605941582966`*^9}, {3.615760671281708*^9, 3.6157606750109215`*^9}, 
+   3.61576260779547*^9, 3.615763799746646*^9, {3.6157640430905647`*^9, 
+   3.6157640445056458`*^9}, {3.615764284916396*^9, 3.6157642869565125`*^9}, {
+   3.6157643566194973`*^9, 3.615764357171529*^9}, {3.6157644256204443`*^9, 
+   3.615764427459549*^9}, {3.6157646522714076`*^9, 3.615764740218438*^9}, {
+   3.615765372893625*^9, 3.615765382564178*^9}, {3.615766138970442*^9, 
+   3.615766201193001*^9}, {3.615766254905073*^9, 3.615766279224464*^9}, {
+   3.615766414929226*^9, 3.6157664549275136`*^9}, {3.615766497455946*^9, 
+   3.615766497790965*^9}, {3.6158201496034765`*^9, 3.6158201542475405`*^9}, {
+   3.6158204241673856`*^9, 3.615820460856484*^9}, {3.615820499559698*^9, 
+   3.615820576126077*^9}, {3.61582062495687*^9, 3.6158206603658953`*^9}, 
+   3.61582070625152*^9, {3.6158207423495846`*^9, 3.6158208120715723`*^9}, {
+   3.6158208941522675`*^9, 3.615820934531577*^9}, 3.615821151403981*^9, 
+   3.615821734758011*^9, {3.615821782396735*^9, 3.6158217856679225`*^9}, {
+   3.6158233149912825`*^9, 3.6158233524816813`*^9}, {3.6158234024658704`*^9, 
+   3.615823407867878*^9}, {3.6158235402260127`*^9, 3.6158235406420364`*^9}, {
+   3.615823584144082*^9, 3.615823584604083*^9}, {3.6158236559384146`*^9, 
+   3.615823660350421*^9}, {3.6158236989515934`*^9, 3.61582370989861*^9}, {
+   3.6158256971166515`*^9, 3.615825707388239*^9}, {3.615825771612912*^9, 
+   3.615825772478962*^9}, {3.6158262699044127`*^9, 3.6158262702344317`*^9}, {
+   3.615826389527255*^9, 3.6158264075602865`*^9}, {3.6158284805848565`*^9, 
+   3.6158285311507487`*^9}, {3.6158287822381105`*^9, 3.615828794228796*^9}, {
+   3.6158288585064726`*^9, 3.615828888821206*^9}, {3.6158290654743104`*^9, 
+   3.615829067353418*^9}, {3.6158291281308937`*^9, 3.615829132571148*^9}, {
+   3.615829190612468*^9, 3.6158291913095074`*^9}, {3.615829670254902*^9, 
+   3.61582967861438*^9}, {3.616152523651645*^9, 3.616152575133793*^9}, {
+   3.617387156904655*^9, 3.6173871576550827`*^9}, {3.617387204447823*^9, 
+   3.617387210543035*^9}, {3.638897576994931*^9, 3.638897586825184*^9}, {
+   3.639246121347886*^9, 3.6392462248942394`*^9}, {3.6392462692016697`*^9, 
+   3.6392463001387634`*^9}},
+ CellID->96894632]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell[BoxData[
+ TagBox[
+  StyleBox[
+   DynamicModuleBox[{$CellContext`complex$$ = 
+    Re, $CellContext`ff$$ = $CellContext`CoulombG, $CellContext`view$$ = 
+    "2D", $CellContext`\[ScriptL]$$ = 1, $CellContext`\[Eta]$$ = 0.5, 
+    Typeset`show$$ = True, Typeset`bookmarkList$$ = {}, 
+    Typeset`bookmarkMode$$ = "Menu", Typeset`animator$$, Typeset`animvar$$ = 
+    1, Typeset`name$$ = "\"untitled\"", Typeset`specs$$ = {{{
+       Hold[$CellContext`ff$$], $CellContext`CoulombG, 
+       "function"}, {$CellContext`CoulombF, $CellContext`CoulombG, \
+$CellContext`CoulombHPlus}}, {{
+       Hold[$CellContext`\[ScriptL]$$], 1}, 0, 10, 1}, {{
+       Hold[$CellContext`\[Eta]$$], 0.5}, 0., 10.}, {{
+       Hold[$CellContext`view$$], "2D"}, {
+      "2D", "3D", "density", "contour", "complex"}}, {{
+       Hold[$CellContext`complex$$], Re, 
+       Text[
+        Style["f", Italic]]}, {Re, Im, Abs, Arg}}}, Typeset`size$$ = {
+    430., {213., 217.}}, Typeset`update$$ = 0, Typeset`initDone$$, 
+    Typeset`skipInitDone$$ = False, $CellContext`ff$735$$ = 
+    0, $CellContext`\[ScriptL]$736$$ = 0, $CellContext`\[Eta]$737$$ = 
+    0, $CellContext`view$738$$ = 0, $CellContext`complex$739$$ = 0}, 
+    DynamicBox[Manipulate`ManipulateBoxes[
+     1, StandardForm, 
+      "Variables" :> {$CellContext`complex$$ = 
+        Re, $CellContext`ff$$ = $CellContext`CoulombG, $CellContext`view$$ = 
+        "2D", $CellContext`\[ScriptL]$$ = 1, $CellContext`\[Eta]$$ = 0.5}, 
+      "ControllerVariables" :> {
+        Hold[$CellContext`ff$$, $CellContext`ff$735$$, 0], 
+        Hold[$CellContext`\[ScriptL]$$, $CellContext`\[ScriptL]$736$$, 0], 
+        Hold[$CellContext`\[Eta]$$, $CellContext`\[Eta]$737$$, 0], 
+        Hold[$CellContext`view$$, $CellContext`view$738$$, 0], 
+        Hold[$CellContext`complex$$, $CellContext`complex$739$$, 0]}, 
+      "OtherVariables" :> {
+       Typeset`show$$, Typeset`bookmarkList$$, Typeset`bookmarkMode$$, 
+        Typeset`animator$$, Typeset`animvar$$, Typeset`name$$, 
+        Typeset`specs$$, Typeset`size$$, Typeset`update$$, Typeset`initDone$$,
+         Typeset`skipInitDone$$}, "Body" :> Which[$CellContext`view$$ == "2D", 
+        Plot[
+         Evaluate[
+          If[$CellContext`ff$$ === $CellContext`CoulombHPlus, Abs, Identity][
+           $CellContext`ff$$[$CellContext`\[ScriptL]$$, \
+$CellContext`\[Eta]$$, $CellContext`\[Rho]]]], {$CellContext`\[Rho], -10., 
+          30}, PlotRange -> {Automatic, {-2, 5}}, ImageSize -> {430, 430}, 
+         PlotPoints -> 35], $CellContext`view$$ == "3D", 
+        Plot3D[
+         Evaluate[
+          If[$CellContext`ff$$ === $CellContext`CoulombHPlus, Abs, Identity][
+           $CellContext`ff$$[$CellContext`\[ScriptL]$$, $CellContext`\[Eta]2, \
+$CellContext`\[Rho]]]], {$CellContext`\[Rho], -15, 
+          15}, {$CellContext`\[Eta]2, -2, 2}, ImageSize -> {430, 430}, 
+         PlotPoints -> 50], $CellContext`view$$ == "density", 
+        DensityPlot[
+         $CellContext`ff$$[$CellContext`\[ScriptL]$$, $CellContext`\[Eta]2, \
+$CellContext`\[Rho]], {$CellContext`\[Rho], -15, 
+          15}, {$CellContext`\[Eta]2, -2, 2}, ImageSize -> 430, PlotPoints -> 
+         35, ClippingStyle -> Automatic], $CellContext`view$$ == "contour", 
+        ContourPlot[
+         $CellContext`ff$$[$CellContext`\[ScriptL]$$, $CellContext`\[Eta]2, \
+$CellContext`\[Rho]], {$CellContext`\[Rho], -15, 
+          15}, {$CellContext`\[Eta]2, -2, 2}, ImageSize -> 430, PlotRange -> 
+         Automatic, PlotPoints -> 35, ClippingStyle -> 
+         Automatic], $CellContext`view$$ == "complex", 
+        DensityPlot[
+         $CellContext`complex$$[
+          $CellContext`ff$$[
+          1, 1, $CellContext`x + I $CellContext`y]], {$CellContext`x, -5, 
+          5}, {$CellContext`y, -5, 5}, ImageSize -> 430, ColorFunction -> 
+         "Pastel", ClippingStyle -> Automatic, MeshFunctions -> 
+         Apply[Function, {{{$CellContext`x, $CellContext`y, $CellContext`z}, 
+             Re[
+              $CellContext`complex$$[
+               $CellContext`ff$$[
+               1, 1, $CellContext`x + 
+                I $CellContext`y]]]}, {{$CellContext`x, $CellContext`y, \
+$CellContext`z}, 
+             Im[
+              $CellContext`complex$$[
+               $CellContext`ff$$[
+               1, 1, $CellContext`x + I $CellContext`y]]]}}, {1}], Mesh -> 10,
+          ExclusionsStyle -> Lighter[Blue]]], 
+      "Specifications" :> {{{$CellContext`ff$$, $CellContext`CoulombG, 
+          "function"}, {$CellContext`CoulombF, $CellContext`CoulombG, \
+$CellContext`CoulombHPlus}, ControlPlacement -> 
+         Top}, {{$CellContext`\[ScriptL]$$, 1}, 0, 10, 1, ImageSize -> Tiny, 
+         Appearance -> "Labeled", Enabled :> 
+         Dynamic[Factorial[$CellContext`view$$] == 
+           "complex"]}, {{$CellContext`\[Eta]$$, 0.5}, 0., 10., ImageSize -> 
+         Tiny, Appearance -> "Labeled", Enabled :> 
+         Dynamic[$CellContext`view$$ == "2D"]}, {{$CellContext`view$$, 
+          "2D"}, {"2D", "3D", "density", "contour", "complex"}, ControlType -> 
+         PopupMenu}, {{$CellContext`complex$$, Re, 
+          Text[
+           Style["f", Italic]]}, {Re, Im, Abs, Arg}, ControlType -> PopupMenu,
+          Enabled :> Dynamic[$CellContext`view$$ == "complex"]}}, 
+      "Options" :> {
+       ControlPlacement -> Left, 
+        TrackedSymbols :> {$CellContext`f, $CellContext`\[ScriptL]$$, \
+$CellContext`\[Eta]$$, $CellContext`view$$, $CellContext`complex$$}, 
+        SynchronousUpdating -> False, SynchronousInitialization -> False, 
+        ContinuousAction -> False, AutorunSequencing -> {1}}, 
+      "DefaultOptions" :> {ControllerLinking -> True}],
+     ImageSizeCache->{632., {255., 262.}},
+     SingleEvaluation->True],
+    Deinitialization:>None,
+    DynamicModuleValues:>{},
+    Initialization:>(({$CellContext`CoulombHPlus[
+          Pattern[$CellContext`\[ScriptL], 
+           Blank[]], 
+          Pattern[$CellContext`\[Eta], 
+           Blank[]], 
+          Pattern[$CellContext`\[Rho], 
+           Blank[]]] := 
+        WhittakerW[(-I) $CellContext`\[Eta], $CellContext`\[ScriptL] + 
+           1/2, ((-2) I) $CellContext`\[Rho]] 
+         E^(
+           I $CellContext`CoulombPhase[$CellContext`\[ScriptL], $CellContext`\
+\[Eta]] + ((1/2) Pi) ($CellContext`\[Eta] - 
+             I $CellContext`\[ScriptL])), $CellContext`CoulombPhase[
+          Pattern[$CellContext`\[ScriptL], 
+           Blank[]], 
+          Pattern[$CellContext`\[Eta], 
+           Blank[]]] := (
+          LogGamma[$CellContext`\[ScriptL] + I $CellContext`\[Eta] + 1] - 
+          LogGamma[$CellContext`\[ScriptL] - I $CellContext`\[Eta] + 1])/(2 
+         I), $CellContext`CoulombG[
+          Pattern[$CellContext`\[ScriptL], 
+           Blank[]], 
+          Pattern[$CellContext`\[Eta], 
+           Blank[]], 
+          Pattern[$CellContext`\[Rho], 
+           Blank[]]] := (1/
+          2) ($CellContext`CoulombHMinus[$CellContext`\[ScriptL], \
+$CellContext`\[Eta], $CellContext`\[Rho]] + \
+$CellContext`CoulombHPlus[$CellContext`\[ScriptL], $CellContext`\[Eta], \
+$CellContext`\[Rho]]), $CellContext`CoulombHMinus[
+          Pattern[$CellContext`\[ScriptL], 
+           Blank[]], 
+          Pattern[$CellContext`\[Eta], 
+           Blank[]], 
+          Pattern[$CellContext`\[Rho], 
+           Blank[]]] := 
+        WhittakerW[
+          I $CellContext`\[Eta], $CellContext`\[ScriptL] + 
+           1/2, (2 I) $CellContext`\[Rho]] 
+         E^(((1/2) Pi) ($CellContext`\[Eta] + I $CellContext`\[ScriptL]) - 
+           I $CellContext`CoulombPhase[$CellContext`\[ScriptL], $CellContext`\
+\[Eta]]), $CellContext`CoulombF[
+          Pattern[$CellContext`\[ScriptL], 
+           Blank[]], 
+          Pattern[$CellContext`\[Eta], 
+           Blank[]], 
+          Pattern[$CellContext`\[Rho], 
+           
+           Blank[]]] := $CellContext`CoulombFactor[$CellContext`\[ScriptL], \
+$CellContext`\[Eta]] 
+         WhittakerM[
+          I $CellContext`\[Eta], $CellContext`\[ScriptL] + 
+           1/2, (2 I) $CellContext`\[Rho]], $CellContext`CoulombFactor[
+          Pattern[$CellContext`\[ScriptL], 
+           Blank[]], 
+          Pattern[$CellContext`\[Eta], 
+           Blank[]]] := (
+          E^(((1/2) (-Pi)) ($CellContext`\[Eta] + 
+             I ($CellContext`\[ScriptL] + 1))) 
+          Sqrt[Gamma[$CellContext`\[ScriptL] - I $CellContext`\[Eta] + 1] 
+            Gamma[$CellContext`\[ScriptL] + I $CellContext`\[Eta] + 1]])/(2 
+         Factorial[2 $CellContext`\[ScriptL] + 1])}; 
+      Typeset`initDone$$ = True); ReleaseHold[
+       HoldComplete[{$CellContext`CoulombPhase[
+            Pattern[$CellContext`\[ScriptL], 
+             Blank[]], 
+            Pattern[$CellContext`\[Eta], 
+             Blank[]]] := (
+            LogGamma[$CellContext`\[ScriptL] + I $CellContext`\[Eta] + 1] - 
+            LogGamma[$CellContext`\[ScriptL] - I $CellContext`\[Eta] + 1])/(2 
+           I); Null, $CellContext`CoulombHPlus[
+            Pattern[$CellContext`\[ScriptL], 
+             Blank[]], 
+            Pattern[$CellContext`\[Eta], 
+             Blank[]], 
+            Pattern[$CellContext`\[Rho], 
+             Blank[]]] := 
+          WhittakerW[(-I) $CellContext`\[Eta], $CellContext`\[ScriptL] + 
+             1/2, (-2) I $CellContext`\[Rho]] 
+           E^(I $CellContext`CoulombPhase[$CellContext`\[ScriptL], \
+$CellContext`\[Eta]] + (1/2) 
+              Pi ($CellContext`\[Eta] - I $CellContext`\[ScriptL])); 
+         Null, $CellContext`CoulombHMinus[
+            Pattern[$CellContext`\[ScriptL], 
+             Blank[]], 
+            Pattern[$CellContext`\[Eta], 
+             Blank[]], 
+            Pattern[$CellContext`\[Rho], 
+             Blank[]]] := 
+          WhittakerW[
+            I $CellContext`\[Eta], $CellContext`\[ScriptL] + 1/2, 2 
+             I $CellContext`\[Rho]] 
+           E^((1/2) Pi ($CellContext`\[Eta] + I $CellContext`\[ScriptL]) - 
+             I $CellContext`CoulombPhase[$CellContext`\[ScriptL], \
+$CellContext`\[Eta]]); Null, $CellContext`CoulombFactor[
+            Pattern[$CellContext`\[ScriptL], 
+             Blank[]], 
+            Pattern[$CellContext`\[Eta], 
+             Blank[]]] := 
+          E^((1/2) (-Pi) ($CellContext`\[Eta] + 
+              I ($CellContext`\[ScriptL] + 1))) 
+           Sqrt[Gamma[$CellContext`\[ScriptL] - I $CellContext`\[Eta] + 1] 
+             Gamma[$CellContext`\[ScriptL] + I $CellContext`\[Eta] + 1]]/(2 
+           Factorial[2 $CellContext`\[ScriptL] + 1]); 
+         Null, $CellContext`CoulombF[
+            Pattern[$CellContext`\[ScriptL], 
+             Blank[]], 
+            Pattern[$CellContext`\[Eta], 
+             Blank[]], 
+            Pattern[$CellContext`\[Rho], 
+             
+             Blank[]]] := $CellContext`CoulombFactor[$CellContext`\[ScriptL], \
+$CellContext`\[Eta]] 
+           WhittakerM[
+            I $CellContext`\[Eta], $CellContext`\[ScriptL] + 1/2, 2 
+             I $CellContext`\[Rho]]; Null, $CellContext`CoulombG[
+            Pattern[$CellContext`\[ScriptL], 
+             Blank[]], 
+            Pattern[$CellContext`\[Eta], 
+             Blank[]], 
+            Pattern[$CellContext`\[Rho], 
+             Blank[]]] := (1/
+            2) ($CellContext`CoulombHMinus[$CellContext`\[ScriptL], \
+$CellContext`\[Eta], $CellContext`\[Rho]] + \
+$CellContext`CoulombHPlus[$CellContext`\[ScriptL], $CellContext`\[Eta], \
+$CellContext`\[Rho]]); Null}]]; Typeset`initDone$$ = True),
+    SynchronousInitialization->False,
+    UndoTrackedVariables:>{Typeset`show$$, Typeset`bookmarkMode$$},
+    UnsavedVariables:>{Typeset`initDone$$},
+    UntrackedVariables:>{Typeset`size$$}], "Manipulate",
+   Deployed->True,
+   StripOnInput->False],
+  Manipulate`InterpretManipulate[1]]], "Output",
+ CellID->254816853],
+
+Cell[CellGroupData[{
+
+Cell["CAPTION", "Section",
+ CellFrame->{{0, 0}, {1, 0}},
+ CellFrameColor->RGBColor[0.87, 0.87, 0.87],
+ FontFamily->"Helvetica",
+ FontSize->12,
+ FontWeight->"Bold",
+ FontColor->RGBColor[0.597406, 0, 0.0527047]],
+
+Cell[TextData[{
+ "Coulomb wavefunctions are solutions of the Schr\[ODoubleDot]dinger equation \
+for scattering of charged particles by a positively charged nucleus, \
+described by a ",
+ Cell[BoxData[
+  FormBox[
+   RowBox[{"1", "/", "r"}], TraditionalForm]], "InlineMath"],
+ " Coulomb potential. They are  important for applications in the quantum \
+theory of scattering, particularly for nuclear physics. Coulomb wavefunctions \
+can be expressed in terms of confluent hypergeometric functions or, \
+alternatively, Whittaker functions. Two special solutions, called the regular \
+and irregular Coulomb wavefunctions, according to their analytic behavior at \
+the nucleus, are denoted by ",
+ Cell[BoxData[
+  FormBox[
+   RowBox[{
+    SubscriptBox["F", "\[ScriptL]"], "(", 
+    RowBox[{"\[Eta]", ",", " ", "\[Rho]"}], ")"}], TraditionalForm]], 
+  "InlineMath"],
+ " and ",
+ Cell[BoxData[
+  FormBox[
+   RowBox[{
+    RowBox[{
+     RowBox[{
+      SubscriptBox["G", "\[ScriptL]"], "\[Eta]"}], ",", " ", "\[Rho]"}], 
+    ")"}], TraditionalForm]], "InlineMath"],
+ ", respectively."
+}], "Text"]
+}, Close]]
+}, Open  ]],
+
+Cell[CellGroupData[{
+
+Cell["DETAILS", "Section",
+ CellFrame->{{0, 0}, {1, 0}},
+ CellFrameColor->RGBColor[0.87, 0.87, 0.87],
+ FontFamily->"Helvetica",
+ FontSize->12,
+ FontWeight->"Bold",
+ FontColor->RGBColor[0.597406, 0, 0.0527047]],
+
+Cell["References", "Text"],
+
+Cell[TextData[{
+ "[1] L. J. Slater, \"Coulomb Wave Functions,\"",
+ StyleBox[" Handbook of Mathematical Functions with Formulas, Graphs, and \
+Mathematical Tables",
+  FontSlant->"Italic"],
+ " (M. Abramowitz and I. A. Stegun, eds.), 9th ed., New York: Dover, 1972 pp. \
+537\[Dash]544."
+}], "Text"],
+
+Cell[TextData[{
+ "[2] I. J. Thompson. \"Coulomb Functions.\" ",
+ StyleBox["Digital Library of Mathematical Functions",
+  FontSlant->"Italic"],
+ ". (Apr 25, 2014) ",
+ ButtonBox["dlmf.nist.gov/33",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://dlmf.nist.gov/33"], None},
+  ButtonNote->"http://dlmf.nist.gov/33"],
+ "."
+}], "Text"],
+
+Cell[TextData[{
+ "[3] F. W. J. Olver, D. W. Lozier, R. F. Boisvert, and C. W. Clark, eds.,",
+ StyleBox[" NIST Handbook of Mathematical Functions",
+  FontSlant->"Italic"],
+ ", New York: Cambridge University Press, 2010."
+}], "Text"],
+
+Cell[TextData[{
+ "[4] QuantumDot. \"Irregular Confluent Hypergeometric Functions (Spherical \
+Coulomb Wavefunctions).\" ",
+ StyleBox["Mathematica Stack Exchange",
+  FontSlant->"Italic"],
+ ". (Mar 22, 2013)",
+ ButtonBox[" ",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+   "mathematica.stackexchange.com/questions/22283/irregular-confluent-\
+hypergeometric-functions-spherical-coulomb-wavefunctions", None}],
+ ButtonBox["mathematica.stackexchange.com/questions/22283/irregular-confluent-\
+hypergeometric-functions-spherical-coulomb-wavefunctions.",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://mathematica.stackexchange.com/questions/22283/irregular-\
+confluent-hypergeometric-functions-spherical-coulomb-wavefunctions"], None},
+  ButtonNote->
+   "http://mathematica.stackexchange.com/questions/22283/irregular-confluent-\
+hypergeometric-functions-spherical-coulomb-wavefunctions"]
+}], "Text"]
+}, Close]],
+
+Cell["THIS NOTEBOOK IS THE SOURCE CODE FROM", "Text",
+ CellFrame->{{0, 0}, {0, 0}},
+ CellMargins->{{48, 10}, {4, 28}},
+ CellGroupingRules->{"SectionGrouping", 25},
+ CellFrameMargins->{{48, 48}, {6, 5}},
+ CellFrameColor->RGBColor[0.87, 0.87, 0.87],
+ FontFamily->"Helvetica",
+ FontSize->10,
+ FontWeight->"Bold",
+ FontColor->RGBColor[0.597406, 0, 0.0527047]],
+
+Cell[TextData[{
+ "\[NonBreakingSpace]",
+ ButtonBox["Enrique Zeleny",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://demonstrations.wolfram.com/author.html?author=Enrique+Zeleny"]\
+, None},
+  ButtonNote->
+   "http://demonstrations.wolfram.com/author.html?author=Enrique+Zeleny"]
+}], "Text",
+ CellMargins->{{48, Inherited}, {0, Inherited}},
+ FontFamily->"Verdana",
+ FontSize->10,
+ FontColor->GrayLevel[0.6]],
+
+Cell[TextData[{
+ "\"",
+ ButtonBox["Coulomb Wavefunctions",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://demonstrations.wolfram.com/CoulombWavefunctions/"], None},
+  ButtonNote->"http://demonstrations.wolfram.com/CoulombWavefunctions/"],
+ "\"",
+ "\[ParagraphSeparator]\[NonBreakingSpace]",
+ ButtonBox["http://demonstrations.wolfram.com/CoulombWavefunctions/",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://demonstrations.wolfram.com/CoulombWavefunctions/"], None},
+  ButtonNote->"http://demonstrations.wolfram.com/CoulombWavefunctions/"],
+ "\[ParagraphSeparator]\[NonBreakingSpace]",
+ ButtonBox["Wolfram Demonstrations Project",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://demonstrations.wolfram.com/"], None},
+  ButtonNote->"http://demonstrations.wolfram.com/"],
+ "\[ParagraphSeparator]\[NonBreakingSpace]",
+ "Published: ",
+ "August 26, 2014"
+}], "Text",
+ CellMargins->{{48, Inherited}, {0, Inherited}},
+ FontFamily->"Verdana",
+ FontSize->10,
+ FontColor->GrayLevel[0.5]],
+
+Cell[CellGroupData[{
+
+Cell[TextData[{
+ "A full-function Wolfram ",
+ StyleBox["Mathematica",
+  FontSlant->"Italic"],
+ " system is required to edit this notebook.\n",
+ StyleBox[ButtonBox["GET WOLFRAM MATHEMATICA \[RightGuillemet]",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://www.wolfram.com/products/mathematica/"], None},
+  ButtonNote->"http://www.wolfram.com/products/mathematica/"],
+  FontFamily->"Helvetica",
+  FontWeight->"Bold",
+  FontSlant->"Italic",
+  FontColor->RGBColor[1, 0.42, 0]]
+}], "Text",
+ CellFrame->True,
+ CellMargins->{{48, 68}, {8, 28}},
+ CellFrameMargins->12,
+ CellFrameColor->RGBColor[0.87, 0.87, 0.87],
+ CellChangeTimes->{3.3750111182355957`*^9},
+ ParagraphSpacing->{1., 1.},
+ FontFamily->"Verdana",
+ FontSize->10,
+ FontColor->GrayLevel[0.411765],
+ Background->RGBColor[1, 1, 1]],
+
+Cell[TextData[{
+ "\[Copyright] ",
+ StyleBox[ButtonBox["Wolfram Demonstrations Project & Contributors",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://demonstrations.wolfram.com/"], None},
+  ButtonNote->"http://demonstrations.wolfram.com/"],
+  FontColor->GrayLevel[0.6]],
+ "\[ThickSpace]\[ThickSpace]\[ThickSpace]|\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+ StyleBox[ButtonBox["Terms of Use",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://demonstrations.wolfram.com/termsofuse.html"], None},
+  ButtonNote->"http://demonstrations.wolfram.com/termsofuse.html"],
+  FontColor->GrayLevel[0.6]],
+ "\[ThickSpace]\[ThickSpace]\[ThickSpace]|\[ThickSpace]\[ThickSpace]\
+\[ThickSpace]",
+ StyleBox[ButtonBox["Make a new version of this Demonstration \
+\[RightGuillemet]",
+  BaseStyle->"Hyperlink",
+  ButtonData->{
+    URL["http://demonstrations.wolfram.com/participate/upload.jsp?id=\
+CoulombWavefunctions"], None},
+  ButtonNote->None],
+  FontColor->GrayLevel[0.6]]
+}], "Text",
+ CellFrame->{{0, 0}, {0, 0.5}},
+ CellMargins->{{48, 10}, {20, 50}},
+ CellFrameMargins->{{6, 0}, {6, 6}},
+ CellFrameColor->GrayLevel[0.6],
+ FontFamily->"Verdana",
+ FontSize->9,
+ FontColor->GrayLevel[0.6]]
+}, Open  ]]
+},
+Editable->True,
+Saveable->False,
+ScreenStyleEnvironment->"Working",
+CellInsertionPointCell->None,
+WindowSize->{710, 650},
+WindowMargins->{{Inherited, Inherited}, {Inherited, 0}},
+WindowElements->{
+ "StatusArea", "MemoryMonitor", "MagnificationPopUp", "VerticalScrollBar", 
+  "MenuBar"},
+WindowTitle->"Coulomb Wavefunctions - Source",
+DockedCells->{},
+CellContext->Notebook,
+FrontEndVersion->"10.2 for Microsoft Windows (64-bit) (July 7, 2015)",
+StyleDefinitions->"Default.nb"
+]
+(* End of Notebook Content *)
+
+(* Internal cache information *)
+(*CellTagsOutline
+CellTagsIndex->{}
+*)
+(*CellTagsIndex
+CellTagsIndex->{}
+*)
+(*NotebookFileOutline
+Notebook[{
+Cell[CellGroupData[{
+Cell[624, 23, 141, 3, 70, "Section"],
+Cell[768, 28, 3749, 65, 70, "Section"],
+Cell[4520, 95, 2350, 65, 70, "Input",
+ InitializationCell->True,
+ CellID->814115294],
+Cell[6873, 162, 2161, 62, 70, "Input",
+ InitializationCell->True,
+ CellID->142342731],
+Cell[9037, 226, 11676, 253, 70, "Input",
+ CellID->96894632]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[20750, 484, 11673, 240, 70, "Output",
+ CellID->254816853],
+Cell[CellGroupData[{
+Cell[32448, 728, 209, 6, 70, "Section"],
+Cell[32660, 736, 1082, 28, 70, "Text"]
+}, Close]]
+}, Open  ]],
+Cell[CellGroupData[{
+Cell[33790, 770, 209, 6, 70, "Section"],
+Cell[34002, 778, 26, 0, 70, "Text"],
+Cell[34031, 780, 295, 7, 70, "Text"],
+Cell[34329, 789, 339, 11, 70, "Text"],
+Cell[34671, 802, 231, 5, 70, "Text"],
+Cell[34905, 809, 902, 20, 70, "Text"]
+}, Close]],
+Cell[35821, 832, 355, 9, 70, "Text",
+ CellGroupingRules->{"SectionGrouping", 25}],
+Cell[36179, 843, 416, 13, 70, "Text"],
+Cell[36598, 858, 1009, 27, 70, "Text"],
+Cell[CellGroupData[{
+Cell[37632, 889, 793, 24, 70, "Text"],
+Cell[38428, 915, 1192, 33, 70, "Text"]
+}, Open  ]]
+}
+]
+*)
+
+(* End of internal cache information *)
+(* NotebookSignature bRzgEj8fKs5H@ATppfs9Hrqx *)

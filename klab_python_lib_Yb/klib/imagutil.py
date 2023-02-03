@@ -34,7 +34,8 @@ def deconvolve(img, w, iters):
 def atomVal(img, mask, w = 6, iters = 20):
     return np.sum(mask*deconvolve(img, w, iters))
 
-def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True, peakParams = [10,10], output = True, coords = None, mindist=100):
+def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True, peakParams = [10,10], output = True, coords = None, mindist=100, disttozero=[50,100,100],
+             get_mask_centers = False):
     """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
 
     if FFT:
@@ -46,11 +47,12 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
 
         # fimgMax = ndi.maximum_filter(fimg, size = 100, mode = 'constant')
         fMaxCoord = peak_local_max(fimgAbs, min_distance=mindist, threshold_rel=.3)
+        print(len(fMaxCoord))
         # fMaxBool = peak_local_max(fimgAbs, min_distance=100, threshold_rel=.1, num_peaks = 4, indices=False)
 
-        fMaxCoord = fMaxCoord[fMaxCoord[:,0]-fftN/2>-fftN/20] # Restrict to positive quadrant
-        fMaxCoord = fMaxCoord[fMaxCoord[:,1]-fftN/2>-fftN/20] # Restrict to positive quadrant
-        fMaxCoord = fMaxCoord[fMaxCoord.sum(axis=1)-fftN>fftN/20] # Restrict to positive quadrant
+        fMaxCoord = fMaxCoord[fMaxCoord[:,0]-fftN/2>disttozero[0]]# Restrict to positive quadrant
+        fMaxCoord = fMaxCoord[fMaxCoord[:,1]-fftN/2>disttozero[1]] # Restrict to positive quadrant
+        fMaxCoord = fMaxCoord[fMaxCoord.sum(axis=1)-fftN>disttozero[2]] # Restrict to positive quadrant
 
     #     xsort = np.lexsort((fMaxCoord[:,0]+fMaxCoord[:,1]))
     #     ysort = np.lexsort((fMaxCoord[:,1]+fMaxCoord[:,0]))
@@ -67,6 +69,7 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
     #     print(xsort)
     #     print(ysort)
         if output == True:
+
             plt.imshow(fimgAbs)
             plt.colorbar()
             plt.plot(fMaxCoord[:,1], fMaxCoord[:,0],'g.')
@@ -74,6 +77,8 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
 
             plt.plot([xpeak[1]],[xpeak[0]],'r.')
             plt.plot([ypeak[1]],[ypeak[0]],'b.')
+            plt.vlines(fftN/2+disttozero[0],0, fftN, colors='b', linestyles='-')
+            plt.hlines(fftN/2+disttozero[1], 0, fftN, colors='r', linestyles='-')
             # plt.plot(0,1000,'r.')
 
             plt.show()
@@ -141,6 +146,7 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
 
             labeled, num_objects = ndi.label(maxima)
             pts = np.array(ndi.center_of_mass(mimg, labeled, range(1, num_objects+1)))
+            # print(pts)
             sort = np.argsort(pts[:,1])
             pts = pts[sort]
 #             pts = arr([(x + py)+[(2*np.pi-phix)/(2*np.pi*normX), (2*np.pi-phiy)/(2*np.pi*normY)] for x in px]).reshape((N[0]*N[1] ,2))
@@ -173,7 +179,10 @@ def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'g
         if FFT:
             print(dx, dy)
 
-    return masks
+    if (get_mask_centers == True):
+        return masks, pts
+    else:
+        return masks
 
 # def getLatticeMasks(mimg, tweezerSpacing = 4, fftN = 2000, N = 10, wmask = 3, mode = 'gauss'):
 #     """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""

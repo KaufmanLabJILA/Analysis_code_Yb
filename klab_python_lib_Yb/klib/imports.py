@@ -33,6 +33,10 @@ from scipy.stats import sem
 from scipy import ndimage as ndi
 from scipy.optimize import curve_fit
 from scipy.special import erf
+from scipy.special import factorial
+from scipy.stats import gamma
+from scipy.special import gamma as gammaf
+from scipy import integrate
 
 from skimage import restoration
 from skimage.feature import peak_local_max
@@ -41,11 +45,11 @@ from skimage import img_as_float
 from PIL import Image
 
 import pickle
-
+# from statistics import NormalDist
 #####
 # Dependencies for HDF file wrapper class, ExpClass
 import h5py as h5
 from colorama import Fore, Style
 #####
 
-from astropy.modeling.models import Voigt1D
+# from astropy.modeling.models import Voigt1D
