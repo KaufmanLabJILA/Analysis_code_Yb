@@ -5,6 +5,7 @@ from .expfile import *
 from .mathutil import *
 # from .plotutil import *
 from .imagutil import *
+import time
 
 import klib.experiment_constants as exc
 
@@ -279,7 +280,7 @@ def find_threshold_2(exp, run, masks, threshold_guess = 10, bin_width = 4, mode 
 
 
 
-def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 'emccd', keep_img = [0,1], crop = [0,None,0,None], output=True, single_threshold=True, center_zero=True, cut=10, xlim=7500):
+def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 'emccd', keep_img = [0,1], crop = [0,None,0,None], output=True, single_threshold=True, center_zero=True, cut=10, xlim=7500, logscale=False):
 
 
     hist_xdata_all = []
@@ -410,31 +411,84 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
 
                 hist_xdata_fine = np.linspace(hist_xdata[0], hist_xdata[-1], 200, endpoint=True)
 
+                
                 mistake_arr = []
-
-                t_arr = np.subtract(np.linspace(hist_xdata[np.argmax(hist[:idx_guess])], hist_xdata[idx_guess+np.argmax(hist[idx_guess:])], 100), hist_xdata[0])
+                idx_voidpeak = np.argmax(hist[:idx_guess])
+                idx_atompeak = np.argmax(hist[idx_guess:])
+                t_arr = np.subtract(np.linspace(hist_xdata[idx_voidpeak + int((idx_guess-idx_voidpeak)/2)], hist_xdata[idx_guess + int((idx_atompeak-idx_guess)/2)], 50), hist_xdata[0])
+                t2 = time.time()
                 for t in t_arr:
 
-                    atom_mistake = integrate.quad(gaussian_skew, -np.inf, t, args=(popt[4], popt[5], popt[6], popt[7], 0,))[0]
-                    void_mistake = integrate.quad(emccd_bkg, t, np.inf, args=(popt[0], popt[1], popt[2],popt[3],))[0]
-                    mistake = void_mistake + atom_mistake
-                    mistake_arr.append(mistake)
+                    av_mistake = integrate.quad(gaussian_skew, -100, t, args=(popt[4], popt[5], popt[6], popt[7], 0,), epsabs=1e-1)[0]
+                    va_mistake = integrate.quad(emccd_bkg, t, 1e4, args=(popt[0], popt[1], popt[2],popt[3],), epsabs=1e-1)[0]
+                    # print(atom_mistake, void_mistake)
+                    mistake_arr.append([va_mistake, av_mistake])
+                t3 = time.time()
+                print(t3-t2)
 
-
-                threshold = t_arr[np.argmin(mistake_arr)]+hist_xdata[0]
+                threshold_idx = np.argmin(np.sum(mistake_arr, axis=1))
+                threshold = t_arr[threshold_idx]+hist_xdata[0]
                 #threshold = t_arr[np.argmin(mistake_arr)]
-                min_mistake = np.min(mistake_arr)
+                min_mistake = mistake_arr[threshold_idx]
 
-                tot_area = integrate.quad(gaussian_skew, -np.inf, np.inf, args=(popt[4], popt[5], popt[6], popt[7], 0,))[0] + integrate.quad(emccd_bkg, -np.inf, np.inf, args=(popt[0], popt[1], popt[2],popt[3],))[0]
+                tot_area_a = integrate.quad(gaussian_skew, -np.inf, np.inf, args=(popt[4], popt[5], popt[6], popt[7], 0,))[0] 
+                tot_area_v = integrate.quad(emccd_bkg, -np.inf, np.inf, args=(popt[0], popt[1], popt[2],popt[3],))[0]
 
-                infidelity = min_mistake/tot_area
-                inf_all.append(infidelity)
+                va_mistake, av_mistake = mistake_arr[threshold_idx]
+                inf_all.append([va_mistake/tot_area_v, av_mistake/tot_area_a])
 
             except:
                 print('threshold fit failed, using threshold guess')
                 fit_worked = False
                 threshold = threshold_guess
-                min_mistake = 1000
+                inf_all.append([0, 0])
+
+        elif (mode=='emccd_skew_fast'):
+            idx_guess = np.abs(hist_xdata - threshold_guess).argmin()
+
+            pguess = np.array([ 1.7, 0,  0.017,
+                                np.max(hist[:idx_guess]),  np.max(hist[idx_guess:]), hist_xdata[idx_guess+np.argmax(hist[idx_guess:])]-hist_xdata[0],
+                                (hist_xdata[-1]-hist_xdata[idx_guess])/5, 0])
+            # try:
+            popt, pcov = curve_fit(emccd_hist_skew, np.subtract(hist_xdata, hist_xdata[0]), hist, p0=pguess, bounds=([1, -np.inf, 1e-10, 0, 0, -np.inf, 0, -np.inf], [100, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf, np.inf])) #p[0] * np.exp( -((x- p[1])**2) / (2*(p[2]**2)) ) + p[3] * np.exp( -((x - p[4])**2) / (2*(p[5]**2)) )
+            popt_all.append(popt)
+
+            hist_xdata_fine = np.linspace(hist_xdata[0], hist_xdata[-1], 200, endpoint=True)
+
+            
+            mistake_arr = []
+            idx_voidpeak = np.argmax(hist[:idx_guess])
+            idx_atompeak = np.argmax(hist[idx_guess:])
+            t_arr = arr(np.subtract(np.arange(hist_xdata[idx_voidpeak], hist_xdata[idx_atompeak]), hist_xdata[0]), dtype=int)
+            t_all = arr(np.arange(t_arr[0]-200, 1e4), dtype=int)
+            atom_curve = gaussian_skew(t_all, popt[4], popt[5], popt[6], popt[7], 0)
+            void_curve = emccd_bkg(t_all, popt[0], popt[1], popt[2], popt[3])
+            t2 = time.time()
+            for t in t_arr:
+                tidx = t - (t_arr[0]-200)
+                atom_mistake = np.sum(atom_curve[:tidx+1])
+                void_mistake = np.sum(void_curve[tidx:])
+                # print(atom_mistake, void_mistake)
+                mistake = void_mistake + atom_mistake
+                mistake_arr.append(mistake)
+            t3 = time.time()
+            print(t3-t2)
+
+
+            threshold = t_arr[np.argmin(mistake_arr)] + hist_xdata[0]
+            #threshold = t_arr[np.argmin(mistake_arr)]
+            min_mistake = mistake_arr[np.argmin(mistake_arr)]
+
+            tot_area = np.sum(atom_curve) + np.sum(void_curve)#integrate.quad(gaussian_skew, -np.inf, np.inf, args=(popt[4], popt[5], popt[6], popt[7], 0,))[0] + integrate.quad(emccd_bkg, -np.inf, np.inf, args=(popt[0], popt[1], popt[2],popt[3],))[0]
+
+            infidelity = min_mistake/tot_area
+            inf_all.append(infidelity)
+
+            # except:
+            #     print('threshold fit failed, using threshold guess')
+            #     fit_worked = False
+            #     threshold = threshold_guess
+            #     min_mistake = 1000
 
         elif (mode=='void_atom'):
             single_threshold=True
@@ -481,9 +535,10 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
     if output == True:
         fig, ax = plt.subplots(figsize=[6,4])
         alphaarr = np.linspace(1.0,0.5, num_img)
+        c_ls = ["m", "c", "tab:orange"]
         for num in keep_img:
             ax.plot(hist_xdata_all[num], hist_all[num], alpha=alphaarr[num], drawstyle='steps-post', color='k', zorder = 0)
-            ax.plot([threshold_all[num], threshold_all[num]], [np.min(hist_all[num]), np.max(hist_all[num])], color='k', linestyle='--', alpha=alphaarr[num], label=num, zorder = 0)
+            ax.plot([threshold_all[num], threshold_all[num]], [np.min(hist_all[num]), np.max(hist_all[num])], linestyle='--', color=c_ls[num], label=num, zorder = 0)
 
         ax.set_xlabel('Counts collected')
         ax.set_ylabel('Events')
@@ -491,11 +546,18 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
         if (mode=='emccd' and fit_worked):
             ax.plot(hist_xdata_all[0], emccd_hist(hist_xdata_all[0]-hist_xdata_all[0][0], *popt_all[0]), label='fit')
 
-        if (mode=='emccd_skew' and fit_worked):
-            ax.plot(hist_xdata_all[0], emccd_hist_skew(hist_xdata_all[0]-hist_xdata_all[0][0], *popt_all[0]), label='fit')
+        elif (mode=='emccd_skew' and fit_worked):
+            for num in keep_img:
+                ax.plot(hist_xdata_all[num], emccd_hist_skew(hist_xdata_all[num]-hist_xdata_all[0][num], *popt_all[num]), label='fit', linewidth=2, color=c_ls[num])
+            
 
-        ax.set_ylim(0, )
-        ax.set_xlim(4800, xlim)
+        if logscale == True:
+            ax.set_yscale('log')
+            ax.set_ylim(0.7, )
+
+        else:
+            ax.set_ylim(0, )
+        #ax.set_xlim(4800, xlim)
         plt.legend()
         ax.set_title(str(exp.data_addr) + "data_" + str(run) + ".h5")
         plt.show()
@@ -522,14 +584,15 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
             print('thresholds: ',[format_string.format(number) for number in [t for i,t in enumerate(threshold_all) if i in keep_img]])
             print('fitted infidelity: ',[format_string.format(number*100) for number in inf_all], 'percent')
 
-        elif (mode=='emccd_skew' and fit_worked):
+        elif (mode=='emccd_skew' or mode=='emccd_skew_fast' and fit_worked):
             print('bkg peak position: ',[format_string.format(number) for number in np.array(popt_all)[:,1]])
             print('atom peak position: ',[format_string.format(number) for number in np.array(popt_all)[:,5]])
             print('atom peak width: ',[format_string.format(number) for number in np.array(popt_all)[:,6]])
             print('bkg peak amplitude: ',[format_string.format(number) for number in np.array(popt_all)[:,3]])
             print('atom peak amplitude: ',[format_string.format(number) for number in np.array(popt_all)[:,4]])
             print('thresholds: ',[format_string.format(number) for number in [t for i,t in enumerate(threshold_all) if i in keep_img]])
-            print('fitted infidelity: ',[format_string.format(number*100) for number in inf_all], 'percent')
+            print('va fitted infidelity: ',[format_string.format(number*100) for i,number in enumerate(arr(inf_all)[:,0]) if i in keep_img], 'percent')
+            print('av fitted infidelity: ',[format_string.format(number*100) for i,number in enumerate(arr(inf_all)[:,1]) if i in keep_img], 'percent')
 
         elif (mode=='void_atom'):
             print('thresholds: ',[format_string.format(number) for number in [t for i,t in enumerate(threshold_all) if i in keep_img]])
@@ -539,6 +602,10 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
         return threshold_all, hist_xdata_all, hist_all, min_mistake, css, popt_all, inf_all, loss_all
     elif (mode=='emccd' and fit_worked):
         return threshold_all, hist_xdata_all, hist_all, min_mistake, css, popt_all, inf_all
+    elif (mode=='emccd_skew' and fit_worked):
+        return threshold_all, hist_xdata_all, hist_all, min_mistake, css, popt_all, inf_all
+    elif (mode=='emccd_skew_fast' and fit_worked):
+        return threshold_all, hist_xdata_all, hist_all, min_mistake, css, popt_all, inf_all, t_arr, t_all, atom_curve, void_curve
     else:
         return threshold_all, hist_xdata_all, hist_all, min_mistake, css
 
@@ -875,6 +942,11 @@ def getMasksManual(mimg,mimg2 = False, red_x=0,red_y = 0,blue_x=0,blue_y = 0,xof
 
             pts = arr([(x + py)+[(2*np.pi-phix)/(2*np.pi*normX)+xoffset, (2*np.pi-phiy)/(2*np.pi*normY)+yoffset] for x in px]).reshape((N[0]*N[1] ,2))
 
+            if output == True:
+                fig, ax = plt.subplots()
+                plt.imshow(mimg)
+                plt.plot(pts[:,1], pts[:,0], 'r.')
+
             if mod2Dgauss != False:
                 chor = mod2Dgauss[0]
                 cver = mod2Dgauss[1]
@@ -916,8 +988,10 @@ def getMasksManual(mimg,mimg2 = False, red_x=0,red_y = 0,blue_x=0,blue_y = 0,xof
 #             pts = arr([(x + py)+[(2*np.pi-phix)/(2*np.pi*normX), (2*np.pi-phiy)/(2*np.pi*normY)] for x in px]).reshape((N[0]*N[1] ,2))
     if output == True:
         if np.all(mimg2) == False:
+            fig, ax = plt.subplots()
             plt.imshow(mimg)
         else:
+            fig, ax = plt.subplots()
             plt.imshow(mimg2)
         if coords != None:
             plt.plot(coords[1],coords[0],'r.')
@@ -1010,10 +1084,6 @@ def get_loss(exp, run, masks, t, sortkey=0, crop=[0,None,0,None], output=True, k
     loaddata = data[keep_img[0]::num_img]
     survdata = data[keep_img[1]::num_img]
 
-
-
-
-
     av = 0
     va = 0
     vv = 0
@@ -1021,7 +1091,7 @@ def get_loss(exp, run, masks, t, sortkey=0, crop=[0,None,0,None], output=True, k
     a = 0
 
     for i in range(len(key)):
-        for j in range(Nvalid,exp.reps):
+        for j in np.arange(Nvalid,exp.reps):
             for m in range(len(masks)):
                 atom1 = loaddata[i*exp.reps +j][m]
                 atom2 = survdata[i*exp.reps +j][m]
@@ -1186,7 +1256,7 @@ def var_scan_loadprob(exp, run, masks, t, fit='none', sortkey=0, crop=[0,None,0,
         return key_sorted, patom_sorted
 
 def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,None,0,None], pguess=None, multiScan=False, fullscale=True, plot=True, keep_img=[0,1], mode='emccd', skip=False,
-                      postselection = False,parity = False, skipFirst=False):
+                      postselection = False,parity = False, skipFirst=False, skipReps = None):
 
 
 
@@ -1256,6 +1326,7 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
         aa = 0
         a = 0
         for j in range(exp.reps):
+            # if (key.shape == (1)):
             for m in range(len(masks)):
                 atom1 = loaddata[i*exp.reps +j][m]
                 atom2 = survdata[i*exp.reps +j][m]
@@ -1560,13 +1631,23 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 print(popt)
                 print('err ', np.sqrt(np.diag(pcov)))
 
+            if fit == 'cosRam':
+                # dampedCos(t, A, tau, f, phi, y0): A*np.exp(-t/tau)/2 * (np.cos(2*np.pi*f*t+phi)) + y0
+                if (pguess == None):
+                    pguess = [1/((key_sorted[-1]-key_sorted[-1])), np.max(surv_prob_sorted)-np.min(surv_prob_sorted), 0, 0.5]
+                popt, pcov = curve_fit(cosRam, key_sorted, surv_prob_sorted, p0=pguess)
+                fitFunc = cosRam
+                print('f, yup, phi, ydown')
+                print(popt)
+                print('err ', np.sqrt(np.diag(pcov)))
+
             if fit == 'gausCos':
                 #gausCos(t, A, sig, f, phi, y0):(A/2)*np.exp(-(t/sig)**2/2) * (np.cos(2*np.pi*f*t+phi)) + y0
                 if (pguess == None):
                     pguess = [np.max(surv_prob_sorted)-np.min(surv_prob_sorted),
                               key_sorted[-1]/2, 4/(key_sorted[-1]), 0,
                               (np.max(surv_prob_sorted)-np.min(surv_prob_sorted))/2]
-                popt, pcov = curve_fit(gausCos, key_sorted, surv_prob_sorted, p0=pguess, bounds=(0,[1, 1e6, 1e9, 2*np.pi, 0.5]))
+                popt, pcov = curve_fit(gausCos, key_sorted, surv_prob_sorted, p0=pguess, bounds=(0,[1, 1e6, 1e9, 2*np.pi, 1]))
                 sig = np.sqrt(2)*popt[1]
                 fitFunc = gausCos
                 print(' A, sig, f, phi, y0')
@@ -1595,6 +1676,14 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 popt, pcov = curve_fit(decayt_gaussian, key_sorted, surv_prob_sorted, p0=pguess)
                 fitFunc = decayt_gaussian
                 print('tau, a, y0 ', popt)
+                print('err ', np.sqrt(np.diag(pcov)))
+
+            if fit == 'decayt_gaussian0':
+                # decayt(t, tau, a, y0): y0 + a*np.exp(-t/tau)
+                pguess = [key_sorted[-1]/5, np.max(surv_prob_sorted)-np.min(surv_prob_sorted)]
+                popt, pcov = curve_fit(decayt_gaussian0, key_sorted, surv_prob_sorted, p0=pguess)
+                fitFunc = decayt_gaussian0
+                print('tau, a ', popt)
                 print('err ', np.sqrt(np.diag(pcov)))
 
             if fit == 'decayt0':
@@ -1720,11 +1809,11 @@ def get_multiexperiment_survival(dataAddress, runs, masks, tfixed, crop=[0,None,
     scriptnames = []
     #t = find_multiexperiment_threshold(dataAddress, runs[::2], masks, threshold_guess = tguess, bin_width = 1, fit=True, crop=crop, output=True)
 
- 
+
     for run in runs:
         exp = ExpFile(dataAddress / 'Raw Data', run)
-     
-        vanpair, aa, av, va, vv, surv, surv_err, data = get_loss(exp, run, masks, t=tfixed, sortkey=0, crop=crop, output=False,Nvalid=0)
+
+        vanpair, aa, av, va, vv, surv, surv_err, data = get_loss(exp, run, masks, t=tfixed, sortkey=0, crop=crop, output=False,Nvalid=Nvalid)
         old_stdout = sys.stdout
         new_stdout = io.StringIO()
         sys.stdout = new_stdout
@@ -2357,12 +2446,7 @@ def cameraCountsToPhotons(counts, l=556, useOffset=True):
 
     return (counts - offset)*exc.CMOSsensitivity12bit/qe
 
-def getMasksAlign(img, disttozero=[-50, -50, 30], t=0.3, output=True):
-
-    wmask=2.5
-    N=[16,3]
-    fftN=2500
-    mindist=30
+def getMasksAlign(img, disttozero=[-50, -50, 30], t=0.3, output=True, N=[16,3], wmask=2.5, fftN=2500, mindist=30):
 
     fimg = np.fft.fft2(img, s = (fftN,fftN))
     fimg = np.fft.fftshift(fimg)

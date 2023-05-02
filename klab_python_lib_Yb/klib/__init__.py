@@ -9,6 +9,6 @@
 # import klib.mako
 
 __all__ = ["expfile", "analysis", "mathutil", "plotutil", "imagutil", "adam", "mako", 
-"motimage2D", "motimage2D", "Yb_constants", "transition"]
+"motimage2D", "motimage2D", "Yb_constants", "transition", "expPlotData", "expPlotter"]
 
 __version__ = "1.1"

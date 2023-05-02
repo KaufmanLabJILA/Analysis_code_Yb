@@ -38,6 +38,8 @@ from scipy.stats import gamma
 from scipy.special import gamma as gammaf
 from scipy import integrate
 
+from lmfit import Model, Parameters
+
 from skimage import restoration
 from skimage.feature import peak_local_max
 from skimage import img_as_float
@@ -51,5 +53,19 @@ import pickle
 import h5py as h5
 from colorama import Fore, Style
 #####
+
+
+# for expPlotter
+import plotly.graph_objects as go
+import plotly.express as px
+from plotly import subplots 
+import plotly.colors as plotlycolors
+from jupyter_dash import JupyterDash
+from dash import Dash, dcc, html, Input, Output, State
+from dash.exceptions import PreventUpdate
+import copy
+import socket
+
+cols = plotlycolors.DEFAULT_PLOTLY_COLORS
 
 # from astropy.modeling.models import Voigt1D

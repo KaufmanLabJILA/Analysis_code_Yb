@@ -26,6 +26,7 @@ class ExpFile:
         self.experiment_time = None
         self.experiment_date = None
         self.data_addr = dataAddress
+        self.file_id = file_id
         if file_id is not None:
             self.f = self.open_hdf5(fileID=file_id)
             self.key_name, self.key = self.get_old_key()
@@ -170,6 +171,10 @@ class ExpFile:
     def print_master_script(self):
         # A shortcut
         self.print_script(self.f['Master-Parameters']['Master-Script'])
+
+    def print_gmoog_script(self):
+        # A shortcut
+        self.print_script(self.f['Gmoog-Parameters']['Gmoog-Script'])
 
     def print_master_script_name(self):
         self.__print_ds(self.f['Master-Parameters']['Master-Script-File-Address'], "")

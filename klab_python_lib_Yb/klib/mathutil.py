@@ -9,6 +9,8 @@ from .imports import *
 # from .adam import *
 # Math tools for klablib
 
+def aom_phase_chirp(x, s1, s2, yinf):
+    return yinf*(1 + s1/x + s2*x )
 
 def beam_waist(z,z0,zr,w0,lam):
 #     zr=np.pi*w0**2/lam
@@ -19,6 +21,9 @@ def const(x,a):
 
 def cos(t, f, A, phi, y0):
     return abs(A/2)*np.cos(2*np.pi*f*t+phi) + y0
+
+def cosRam(t, f, yup, phi, ydown):
+    return abs((yup-ydown)/2)*np.cos(2*np.pi*f*t+phi) + (yup+ydown)/2
 
 def cosFit(keyVals, dat, n = 0, ic = False):
     """Cosine fit. Parameter order: [f. A, phi, y0]"""
@@ -155,6 +160,9 @@ def decayt(t, tau, a, y0):
 
 def decayt_gaussian(t, tau, a, y0):
     return y0 + a*np.exp(-(t/tau)**2)
+
+def decayt_gaussian0(t, tau, a):
+    return a*np.exp(-(t/tau)**2)
 
 def decayt0(t, tau, a):
     """Exponential decay [tau, amp]"""
