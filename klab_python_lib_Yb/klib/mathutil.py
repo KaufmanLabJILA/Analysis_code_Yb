@@ -19,8 +19,8 @@ def beam_waist(z,z0,zr,w0,lam):
 def const(x,a):
     return a
 
-def cos(t, f, A, phi, y0):
-    return abs(A/2)*np.cos(2*np.pi*f*t+phi) + y0
+def cos(x, f, A, phi, y0):
+    return abs(A/2)*np.cos(2*np.pi*f*x+phi) + y0
 
 def cosRam(t, f, yup, phi, ydown):
     return abs((yup-ydown)/2)*np.cos(2*np.pi*f*t+phi) + (yup+ydown)/2
@@ -549,6 +549,9 @@ def ramanRabi_pol(x, theta, T, A, x0):
 def sin_rect(x, T, A, x0):
     """Fit Raman Rabi X qubit rate, assuming perfect polarization and perfect orthogonality b/w k and B"""
     return np.abs(A*np.sin(2*3.14159265*(x-x0)/T))
+
+def sinA1(x, f, x0, y0):
+    return 0.5*np.sin(2*3.14159265*(x-x0)*f) + y0
 
 def sinc2(x, x0, a0, y0, k0):
     return a0*np.sinc((x-x0)/k0)**2 + y0

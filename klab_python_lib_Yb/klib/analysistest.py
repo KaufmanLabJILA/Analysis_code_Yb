@@ -1255,8 +1255,8 @@ def var_scan_loadprob(exp, run, masks, t, fit='none', sortkey=0, crop=[0,None,0,
     else:
         return key_sorted, patom_sorted
 
-def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,None,0,None], pguess=None, multiScan=False, fullscale=True, plot=True, keep_img=[0,1], mode='emccd', skip=False,
-                      postselection = False,parity = False, skipFirst=False, skipReps = None, useErrorBars = False):
+def var_scan_survprobtest(exp, run, masks, t, fit='none', use_errorBars = False, sortkey=[0,1], crop=[0,None,0,None], pguess=None, multiScan=False, fullscale=True, plot=True, keep_img=[0,1], mode='emccd', skip=False,
+                      postselection = False,parity = False, skipFirst=False, skipReps = None):
 
 
 
@@ -1400,13 +1400,13 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
 
         surv_prob_sorted = np.array(surv_prob)[np.argsort(key)]
         surv_prob_uncertainty_sorted = np.array(surv_prob_uncertainty)[np.argsort(key)]
-
-        key_sorted = np.sort(key)
         
-        if (useErrorBars):
-            errors_for_fit = np.sqrt(surv_prob_uncertainty_sorted**2+1/a**2)
+        if (use_errorBars):
+            errors_for_fit = surv_prob_uncertainty_sorted
         else:
             errors_for_fit = np.ones(len(surv_prob_uncertainty_sorted))
+
+        key_sorted = np.sort(key)
 
         if (key.ndim == 1):
             fitFunc = None
@@ -1489,7 +1489,7 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 if (pguess == None):
                     pguess = [(key_sorted[-1]+key_sorted[0])/3, 2*(key_sorted[-1]+key_sorted[0])/3,
                               0.4, 0.4, 0.01, 0.01, 0]
-                popt, pcov = curve_fit(twogaussian, key_sorted, surv_prob_sorted, sigma = errors_for_fit, p0=pguess)
+                popt, pcov = curve_fit(twogaussian, key_sorted, surv_prob_sorted, p0=pguess)
                 fitFunc = twogaussian
                 print('x0, x1, a0, a1, sig0, sig1, y0')
                 print(popt)
@@ -1639,7 +1639,7 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 # dampedCos(t, A, tau, f, phi, y0): A*np.exp(-t/tau)/2 * (np.cos(2*np.pi*f*t+phi)) + y0
                 if (pguess == None):
                     pguess = [1/((key_sorted[-1]-key_sorted[-1])), np.max(surv_prob_sorted)-np.min(surv_prob_sorted), 0, 0.5]
-                popt, pcov = curve_fit(cos, key_sorted, surv_prob_sorted, sigma = errors_for_fit, p0=pguess)
+                popt, pcov = curve_fit(cos, key_sorted, surv_prob_sorted, sigma=errors_for_fit, p0=pguess)
                 fitFunc = cos
                 print('f, A, phi, y0')
                 print(popt)

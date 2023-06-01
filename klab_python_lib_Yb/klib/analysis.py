@@ -305,7 +305,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
         #find counts from an image
         sig = exp.pics[num::num_img, crop[0]:crop[1], crop[2]:crop[3]]
         if center_zero and mode=='cmos':
-            diff = sig-bkg
+            diff = sig
         else:
             diff=sig
         cs = np.array(list(map(lambda image: list(map(lambda mask:np.sum(mask*image),masks)),diff)))
@@ -411,7 +411,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
 
                 hist_xdata_fine = np.linspace(hist_xdata[0], hist_xdata[-1], 200, endpoint=True)
 
-                
+
                 mistake_arr = []
                 idx_voidpeak = np.argmax(hist[:idx_guess])
                 idx_atompeak = np.argmax(hist[idx_guess:])
@@ -431,7 +431,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
                 #threshold = t_arr[np.argmin(mistake_arr)]
                 min_mistake = mistake_arr[threshold_idx]
 
-                tot_area_a = integrate.quad(gaussian_skew, -np.inf, np.inf, args=(popt[4], popt[5], popt[6], popt[7], 0,))[0] 
+                tot_area_a = integrate.quad(gaussian_skew, -np.inf, np.inf, args=(popt[4], popt[5], popt[6], popt[7], 0,))[0]
                 tot_area_v = integrate.quad(emccd_bkg, -np.inf, np.inf, args=(popt[0], popt[1], popt[2],popt[3],))[0]
 
                 va_mistake, av_mistake = mistake_arr[threshold_idx]
@@ -455,7 +455,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
 
             hist_xdata_fine = np.linspace(hist_xdata[0], hist_xdata[-1], 200, endpoint=True)
 
-            
+
             mistake_arr = []
             idx_voidpeak = np.argmax(hist[:idx_guess])
             idx_atompeak = np.argmax(hist[idx_guess:])
@@ -549,7 +549,7 @@ def find_threshold(exp, run, masks, threshold_guess = 10, bin_width = 4, mode = 
         elif (mode=='emccd_skew' and fit_worked):
             for num in keep_img:
                 ax.plot(hist_xdata_all[num], emccd_hist_skew(hist_xdata_all[num]-hist_xdata_all[0][num], *popt_all[num]), label='fit', linewidth=2, color=c_ls[num])
-            
+
 
         if logscale == True:
             ax.set_yscale('log')
@@ -1488,6 +1488,7 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 fitFunc = twogaussian
                 print('x0, x1, a0, a1, sig0, sig1, y0')
                 print(popt)
+                print('err ', np.sqrt(np.diag(pcov)))
 
             if fit == 'tripgaus':
                 # triplor(x, a0, a1, a2, kc, ks, x0, dx, y0)
@@ -1545,6 +1546,14 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 popt, pcov = curve_fit(ramanRabi_pol, key_sorted, surv_prob_sorted, p0=pguess)
                 fitFunc = ramanRabi_pol
                 print('theta, T, a0, x0')
+                print(popt)
+
+            if fit == 'sinA1':
+                if (pguess == None):
+                    pguess = [1, 0, 0.5]
+                popt, pcov = curve_fit(sinA1, key_sorted, surv_prob_sorted, p0=pguess)
+                fitFunc = sinA1
+                print('f', 'x0', 'y0')
                 print(popt)
 
             if fit == 'sinc2':
