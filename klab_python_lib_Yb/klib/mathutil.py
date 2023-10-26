@@ -483,6 +483,10 @@ def gaussianBeamFit2D(datc, auto = True, mguess = []):
 #     print('Residual, RMS(obs - pred)/mean:', np.sqrt(np.mean((datf - zpred)**2))/np.mean(datf))
     return zpred.reshape(datc.shape[0],datc.shape[1]), pred_params, perr
 
+def gsRamScatt(x, bgdiff, quench):
+    """Formula for fitting to Raman scattering survival rate for GS atoms. Assumes 40 s vacuum lifetime."""
+    return (1-np.exp((-bgdiff-quench)*x))/(1+bgdiff/quench)*np.exp(-x/40e3)
+
 def hockey_fall(x_arr, x0, rate, offset):
     y_arr =[]
     for x in x_arr:

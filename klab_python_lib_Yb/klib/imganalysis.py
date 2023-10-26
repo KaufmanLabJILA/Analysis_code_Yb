@@ -119,6 +119,7 @@ def analyze_histogram(exp, run, masks, threshold_guess = 5300, bin_width = 10, k
     format_string = "{:.3f}"
 
     print('bkg peak position: ',[format_string.format(number) for number in np.array(popt_all)[:,1]])
+    print('bkg peak width param: ',[format_string.format(number) for number in np.array(popt_all)[:,2]])
     print('atom peak position: ',[format_string.format(number) for number in np.array(popt_all)[:,5]])
     print('atom peak width: ',[format_string.format(number) for number in np.array(popt_all)[:,6]])
     print('bkg peak amplitude: ',[format_string.format(number) for number in np.array(popt_all)[:,3]])
@@ -129,8 +130,8 @@ def analyze_histogram(exp, run, masks, threshold_guess = 5300, bin_width = 10, k
 
     return threshold_all, hist_xdata_all, hist_all, popt_all, pcov_all, inf_all, xfit_all
 
-def get_events(exp, run, masks, threshold, crop=[0,None,0,None], keep_img=[0,1], skipFirst=True):
-
+def get_events(exp, run, masks, threshold, crop=[0,None,0,None], keep_img=[0,1], skipFirst=True,postselection=False,parity=True,order='1'):
+    sitenum = len(masks) #this number change when this is for rydberg
     num_img = int(exp.pics.shape[0]/exp.reps/len(exp.key)) #number of images per rep
     data = exp.pics[:, crop[0]:crop[1], crop[2]:crop[3]] #get data
 
@@ -150,6 +151,15 @@ def get_events(exp, run, masks, threshold, crop=[0,None,0,None], keep_img=[0,1],
         atoms.append([np.clip(r, threshold[idx], threshold[idx]+1) - threshold[idx] for i,r in enumerate(roisums[img::num_img])])
     atoms = arr(atoms)
 
+    #this is for postselection for Rydberg exp
+    if postselection != False:
+        atoms2, sitenum = postselect(atoms,postselection,masks,parity,order)
+        atoms=atoms2
+
+
+
+
+
     if len(keep_img)==2: #for now consider only 2 image case
         sums = atoms[0]+atoms[1]
         diffs = atoms[0]-atoms[1]
@@ -161,7 +171,51 @@ def get_events(exp, run, masks, threshold, crop=[0,None,0,None], keep_img=[0,1],
         aaf, vvf, avf, vaf = np.sum(aa), np.sum(vv), np.sum(av), np.sum(va) #sum over ROIs and repetitions.
 
 
-    return aa, av, va, vv
+
+    return aa, av, va, vv,sitenum
+
+def postselect(atoms,postselection,masks,parity,order = '2'):
+
+    loaddata = arr(atoms[0])
+    survdata = arr(atoms[1])
+
+    if order == '1':
+        loaddata1 = loaddata[:,:masks.shape[0]//2]
+        loaddata2 = loaddata[:,masks.shape[0]//2:masks.shape[0]]
+        survdata1 = survdata[:,:masks.shape[0]//2]
+        survdata2 = survdata[:,masks.shape[0]//2:masks.shape[0]]
+    elif order == '2':
+        loaddata1 = loaddata[:,::2]
+        loaddata2 = loaddata[:,1::2]
+        survdata1 = survdata[:,::2]
+        survdata2 = survdata[:,1::2]
+
+
+    dimer = loaddata1*loaddata2
+    atoms2 = []
+
+    if postselection == 'dimer':
+
+        if parity == True:
+            print('Probablity of parity even')
+            atoms2.append(dimer)
+            atoms2.append((survdata1*dimer + survdata2*dimer + 1)%2)
+        elif parity == '11':
+            print('Probablity of 11')
+            atoms2.append(dimer)
+            dimer_sum = survdata1*dimer + survdata2*dimer
+            atoms2.append(np.where(dimer_sum>1,dimer_sum, 0)/2)
+        elif parity == '00':
+            print('Probablity of 00')
+            atoms2.append(dimer)
+            dimer_sum = survdata1*dimer + survdata2*dimer
+            atoms2.append(np.where((2-dimer_sum)>1,(2-dimer_sum), 0)/2*dimer)
+    elif postselection == 'singlet':
+        atoms2.append(np.where((loaddata1+loaddata2)==0,(loaddata1+loaddata2), 1)*(1-dimer))
+        atoms2.append(np.where((survdata1+survdata2)==0,(survdata1+survdata2), 1)*(1-dimer)) #not taking acont of the result seriously
+    sitenum=dimer.shape[1]
+
+    return arr(atoms2),sitenum
 
 def get_events_noerrors(exp, run, masks, threshold, crop=[0,None,0,None], keep_img=[0,1], skipFirst=True):
 
@@ -466,7 +520,73 @@ def SPAM_correct(address, run, masks, crop, threshold, inv_M, keep_img, skipFirs
     return real_arr, measured_arr
 
 
-def analyze_survival(exp, run, masks, threshold, crop, fit, pguess, keep_img=[0,1], skipFirst=True, fullscale=True, givemean=True, noerrors=False):
+def analyze_survival(exp, run, masks, threshold, crop, fit, pguess, keep_img=[0,1], skipFirst=True, fullscale=True, givemean=True, noerrors=False,postselection=False,parity=True,order='2'):
+
+    if noerrors == False:
+        aa, av, va, vv ,sitenum= get_events(exp, run, masks, threshold, crop=crop,
+                        keep_img=keep_img, skipFirst = skipFirst,postselection=postselection,parity=parity,order=order)
+    else:
+        aa, av, va, vv ,sitenum= get_events_noerrors(exp, run, masks, threshold, crop=crop,
+                        keep_img=keep_img, skipFirst = skipFirst)
+
+    if skipFirst==True:
+        key = exp.key[1:]
+    else:
+        key = exp.key
+
+    aaff = np.sum(np.sum(aa.reshape(len(key), exp.reps, sitenum), axis=1), axis=1)
+    avff = np.sum(np.sum(av.reshape(len(key), exp.reps, sitenum), axis=1), axis=1)
+    vaff = np.sum(np.sum(va.reshape(len(key), exp.reps, sitenum), axis=1), axis=1)
+    vvff = np.sum(np.sum(vv.reshape(len(key), exp.reps, sitenum), axis=1), axis=1)
+
+    s = aaff/(aaff+avff)
+    serr = np.sqrt(s*(1-s)/(aaff+avff))
+    serr = [3/(len(aaff)+len(avff)) if x==0 else x for x in serr]
+
+
+    if givemean:
+        aaff_sum = np.sum(aaff)
+        avff_sum = np.sum(avff)
+        s_sum = aaff_sum/(aaff_sum+avff_sum)
+        serr_sum = np.sqrt(s_sum*(1-s_sum)/(aaff_sum+avff_sum))
+        if serr_sum==0:
+            serr_sum = 1.15/(len(aaff_sum)+len(avff_sum))
+
+        print("mean survival: %.3f +- %.3f percent" %(s_sum*1e2, serr_sum*1e2))
+
+    if fit:
+
+        valid = ~(np.isnan(s) | np.isnan(serr))
+        s = np.array(s)[valid]
+        serr = np.array(serr)[valid]
+
+        param, param_err = curve_fit(fit, key, s, sigma=serr, p0=pguess)
+
+        x_fine = np.linspace(min(key), max(key),100000)
+        fit_fine = fit(x_fine, *param)
+
+        print(fit, '=', param)
+        print('Err =', np.sqrt(np.diag(param_err)))
+
+        plt.figure()
+        plt.title(str(exp.data_addr) + "data_" + str(run) + ".h5")
+        plt.plot(x_fine, fit_fine, 'k-')
+        plt.errorbar(key, s, serr, marker='o', linestyle='none', color='k', mfc='white')
+        if fullscale==True:
+            plt.ylim(0, 1)
+        plt.ylabel('survival')
+        plt.xlabel(exp.key_name)
+        plt.show()
+
+    if givemean and fit:
+        return key, s, serr, param, param_err, s_sum, serr_sum
+    elif fit:
+        return key, s, serr, param, param_err
+    elif givemean:
+        return key, s, serr, s_sum, serr_sum
+
+
+def analyze_survival_SPAMcorrect(exp, run, masks, infs, threshold, crop, fit, pguess, keep_img=[0,1], skipFirst=True, fullscale=True, givemean=True, noerrors=False):
 
     if noerrors == False:
         aa, av, va, vv = get_events(exp, run, masks, threshold, crop=crop,
@@ -485,8 +605,28 @@ def analyze_survival(exp, run, masks, threshold, crop, fit, pguess, keep_img=[0,
     vaff = np.sum(np.sum(va.reshape(len(key), exp.reps, len(masks)), axis=1), axis=1)
     vvff = np.sum(np.sum(vv.reshape(len(key), exp.reps, len(masks)), axis=1), axis=1)
 
-    s = aaff/(aaff+avff)
-    serr = np.sqrt(s*(1-s)/(aaff+avff))
+    axff = aaff+avff
+    vxff = vaff+vvff
+    xaff = aaff+vaff
+    xvff = avff+vvff
+
+    va1inf = infs[0][0]
+    av1inf = infs[0][1]
+    va2inf = infs[1][0]
+    av2inf = infs[1][1]
+
+    va1err = va1inf#*(axff+vxff)/vxff
+    av1err = av1inf#*(axff+vxff)/axff
+    va2err = va2inf#*(axff+vxff)/vxff
+    av2err = av2inf#*(axff+vxff)/axff
+
+    aaff_corr = aaff-vaff*va1err-avff*va2err+aaff*av1err+aaff*av2err
+    avff_corr = avff-vvff*va1err-aaff*av2err+avff*av1err+avff*va2err
+    vaff_corr = vaff-aaff*av1err-vvff*va2err+vaff*va1err+vaff*av2err
+    vvff_corr = vvff-avff*av1err-vaff*av2err+vvff*va1err+vvff*va2err
+
+    s = aaff_corr/(aaff_corr+avff_corr)
+    serr = np.sqrt(np.absolute(s*(1-s)/(aaff_corr+avff_corr)))
     serr = [3/(len(aaff)+len(avff)) if x==0 else x for x in serr]
 
 
@@ -494,7 +634,7 @@ def analyze_survival(exp, run, masks, threshold, crop, fit, pguess, keep_img=[0,
         aaff_sum = np.sum(aaff)
         avff_sum = np.sum(avff)
         s_sum = aaff_sum/(aaff_sum+avff_sum)
-        serr_sum = np.sqrt(s_sum*(1-s_sum)/(aaff_sum+avff_sum))
+        serr_sum = np.sqrt(np.absolute(s_sum*(1-s_sum)/(aaff_sum+avff_sum)))
         if serr_sum==0:
             serr_sum = 1.15/(len(aaff_sum)+len(avff_sum))
 

@@ -13,6 +13,11 @@ def psf(x, w):
     # return np.sqrt(2)/np.sqrt(np.pi)/w*np.exp(-2*(x**2)/w**2)
     return np.exp(-2*(x**2)/w**2)
 
+def psf_ellipse(x, y, wx, wy):
+#     return 1/(np.pi*w/2)*np.exp(-2*(x**2)/w)
+    # return np.sqrt(2)/np.sqrt(np.pi)/w*np.exp(-2*(x**2)/w**2)
+    return np.exp(-2*(x**2)/wx**2 - 2*(y**2)/wy**2)
+
 def box(x, R):
     return np.where(x>R, 0, 1)
 
@@ -34,7 +39,7 @@ def deconvolve(img, w, iters):
 def atomVal(img, mask, w = 6, iters = 20):
     return np.sum(mask*deconvolve(img, w, iters))
 
-def getMasks(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True, peakParams = [10,10], output = True, coords = None, mindist=100, disttozero=[50,100,100],
+def getMasksOLD(mimg, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True, peakParams = [10,10], output = True, coords = None, mindist=100, disttozero=[50,100,100],
              get_mask_centers = False):
     """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
 

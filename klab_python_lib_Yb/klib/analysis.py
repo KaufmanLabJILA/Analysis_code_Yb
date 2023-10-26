@@ -841,8 +841,8 @@ def get_loss3(exp, run, masks, t, sortkey=0, crop=[0,None,0,None], output=True, 
 
     return (vaa+vav+vva)/npair, ava, avv, (vaa+vav+vva), vvv, surv, surv_err, data
 
-def getMasksManual(mimg,mimg2 = False, red_x=0,red_y = 0,blue_x=0,blue_y = 0,xoffset=0, yoffset=0,fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True, peakParams = [10,10], output = True, coords = None, mindist=100, disttozero=[50,100,100],
-             get_mask_centers = False,mod2Dgauss = False):
+def getMasksManual(mimg,mimg2 = False, red_x=0,red_y = 0,blue_x=0,blue_y = 0,xoffset=0, yoffset=0, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True,
+                   peakParams = [10,10], output = True, coords = None, mindist=100, disttozero=[50,100,100], get_mask_centers = False, mod2Dgauss = False, peaknumx = 0, peaknumy = 0):
     """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
 
     if FFT:
@@ -870,7 +870,7 @@ def getMasksManual(mimg,mimg2 = False, red_x=0,red_y = 0,blue_x=0,blue_y = 0,xof
         xsort = np.argsort(fMaxCoord[:,1]+fMaxCoord[:,0]/5)
         ysort = np.argsort(fMaxCoord[:,0]+fMaxCoord[:,1]/5)
 
-        xpeak, ypeak = fMaxCoord[xsort[0]], fMaxCoord[ysort[0]]
+        xpeak, ypeak = fMaxCoord[xsort[peaknumx]], fMaxCoord[ysort[peaknumy]]
 
     #     print(fMaxCoord)
     #     print(xsort)
@@ -985,6 +985,23 @@ def getMasksManual(mimg,mimg2 = False, red_x=0,red_y = 0,blue_x=0,blue_y = 0,xof
             # print(pts)
             sort = np.argsort(pts[:,1])
             pts = pts[sort]
+
+            if mod2Dgauss != False:
+                chor = mod2Dgauss[0]
+                cver = mod2Dgauss[1]
+                ptsfit = []
+                for pt in pts:
+            #        print(pt)
+                    x1, x2, y1, y2 = int(pt[1]-chor), int(pt[1]+chor+1), int(pt[0]-cver), int(pt[0]+cver+1)
+                    impt = mimg[y1:y2,x1:x2]
+            #         plt.imshow(impt)
+                    ptfit = gaussFit2d_rot(impt)
+
+                    if np.sqrt(np.diag(ptfit[2]))[0] <100:
+                        ptsfit.append([int(pt[0]-cver)+ptfit[1][2],int(pt[1]-chor)+ptfit[1][1]])
+                    else:
+                        ptsfit.append(pt)
+                pts = np.array(ptsfit)
 #             pts = arr([(x + py)+[(2*np.pi-phix)/(2*np.pi*normX), (2*np.pi-phiy)/(2*np.pi*normY)] for x in px]).reshape((N[0]*N[1] ,2))
     if output == True:
         if np.all(mimg2) == False:
@@ -1060,7 +1077,87 @@ def gaussFit2d_rot(datc):
 #     print('Residual, RMS(obs - pred)/mean:', np.sqrt(np.mean((datf - zpred)**2))/np.mean(datf))
     return zpred.reshape(datc.shape[0],datc.shape[1]), pred_params, uncert_cov
 
+def getMasksGuessPts(mimg, pts, mod2Dgauss=[2.0,2.0], wmask = 3, mode = 'gauss',  output = True, coords = None,
+                     get_mask_centers = False):
+    """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
 
+    chor = mod2Dgauss[0]
+    cver = mod2Dgauss[1]
+    ptsfit = []
+    for pt in pts:
+#        print(pt)
+        x1, x2, y1, y2 = int(pt[1]-chor), int(pt[1]+chor+1), int(pt[0]-cver), int(pt[0]+cver+1)
+        impt = mimg[y1:y2,x1:x2]
+#         plt.imshow(impt)
+        ptfit = gaussFit2d_rot(impt)
+
+        if np.sqrt(np.diag(ptfit[2]))[0] <100:
+            ptsfit.append([int(pt[0]-cver)+ptfit[1][2],int(pt[1]-chor)+ptfit[1][1]])
+        else:
+            ptsfit.append(pt)
+    pts = np.array(ptsfit)
+
+    if output == True:
+        fig, ax = plt.subplots(figsize=[20,20])
+        plt.imshow(mimg)
+
+        if coords != None:
+            plt.plot(coords[1],coords[0],'r.')
+        else:
+
+            plt.plot(pts[:,1],pts[:,0],'r.')
+
+        plt.show()
+
+    x = np.arange(len(mimg[0]))
+    y = np.arange(len(mimg[:,0]))
+
+    xx, yy = np.meshgrid(x, y)
+
+    if mode == 'gauss':
+        masks = arr([psf(np.sqrt((xx-pts[i,1])**2+(yy-pts[i,0])**2), wmask) for i in range(len(pts))])
+        if coords != None:
+            masks = arr([psf(np.sqrt((xx-coords[1])**2+(yy-coords[0])**2), wmask) for i in range(len(pts))])
+    if mode == 'box':
+        masks = arr([box(np.sqrt((xx-pts[i,1])**2+(yy-pts[i,0])**2), wmask) for i in range(len(pts))])
+    if output == True:
+        fig, ax = plt.subplots(figsize=[20,20])
+        plt.imshow(np.sum(masks, axis=0))
+        if coords != None:
+            plt.plot(coords[1],coords[0],'r.')
+        else:
+            plt.plot(pts[:,1],pts[:,0],'r.')
+
+        plt.show()
+
+    # plt.rcParams["figure.figsize"] = (5,4)
+
+    if (get_mask_centers == True):
+        return masks, pts
+    else:
+        return masks
+
+def gaussFit2d_rot(datc):
+    """2D Gaussian fit to image matrix. params [amp, x0, y0, theta, w_x, w_y]"""
+    rows=range(datc.shape[1])
+    cols=range(datc.shape[0])
+    x,y=np.meshgrid(rows,cols)
+    x,y=x.flatten(),y.flatten()
+    xy=[x,y]
+    datf=datc.flatten()
+
+    i = datf.argmax()
+    ihalf=np.argmin(np.abs(datf-datf[i]/2)) #find position of half-maximum
+    sig_x_guess = np.abs(x[i]-x[ihalf]) - 0.5
+    sig_y_guess = np.abs(y[i]-y[ihalf]) - 0.5
+#     print(sig_x_guess,sig_y_guess)
+    guess = [datf[i], x[i], y[i], 0, sig_x_guess, sig_y_guess]
+    pred_params, uncert_cov = curve_fit(gauss2d, xy, datf, p0=guess, maxfev=100000)
+
+    zpred = gauss2d(xy, *pred_params)
+    #print('Predicted params:', pred_params)
+#     print('Residual, RMS(obs - pred)/mean:', np.sqrt(np.mean((datf - zpred)**2))/np.mean(datf))
+    return zpred.reshape(datc.shape[0],datc.shape[1]), pred_params, uncert_cov
 
 def get_loss(exp, run, masks, t, sortkey=0, crop=[0,None,0,None], output=True, keep_img=[0,1], mode='none',skipFirst=False,Nvalid=0):
 
@@ -1256,7 +1353,7 @@ def var_scan_loadprob(exp, run, masks, t, fit='none', sortkey=0, crop=[0,None,0,
         return key_sorted, patom_sorted
 
 def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,None,0,None], pguess=None, multiScan=False, fullscale=True, plot=True, keep_img=[0,1], mode='emccd', skip=False,
-                      postselection = False,parity = False, skipFirst=False, skipReps = None):
+                      postselection = False,parity = False, skipFirst=False, skipReps = None, order ='2',cutnum = False):
 
 
 
@@ -1273,14 +1370,41 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
         key = exp.key
         key_name = exp.key_name
 
+    reps = exp.reps
+    if cutnum != False:
+        print("cutnum = {:.2f}".format(cutnum))
+        if cutnum >= 0:
+            datas = []
+            for index in range(arr(data).shape[0]):
+                if index%(num_img*exp.reps) >= cutnum*num_img:
+                    datas.append(data[index])
+            data = np.array(datas)
+            reps = exp.reps-cutnum
+        elif cutnum < 0:
+            datas = []
+            for index in range(arr(data).shape[0]):
+                if index%(num_img*exp.reps) < (exp.reps+cutnum+1)*num_img:
+                    datas.append(data[index])
+            data = np.array(datas)
+            reps = exp.reps+cutnum+1
+
+
     loaddata = data[keep_img[0]::num_img]
+    return_loaddata = loaddata
     survdata = data[keep_img[1]::num_img]
 
     if postselection != False:
-        loaddata1 = arr(loaddata)[:,:masks.shape[0]//2]
-        loaddata2 = arr(loaddata)[:,masks.shape[0]//2:masks.shape[0]]
-        survdata1 = arr(survdata)[:,:masks.shape[0]//2]
-        survdata2 = arr(survdata)[:,masks.shape[0]//2:masks.shape[0]]
+        if order == '1':
+            loaddata1 = arr(loaddata)[:,:masks.shape[0]//2]
+            loaddata2 = arr(loaddata)[:,masks.shape[0]//2:masks.shape[0]]
+            survdata1 = arr(survdata)[:,:masks.shape[0]//2]
+            survdata2 = arr(survdata)[:,masks.shape[0]//2:masks.shape[0]]
+        elif order == '2':
+            loaddata1 = arr(loaddata)[:,::2]
+            loaddata2 = arr(loaddata)[:,1::2]
+            survdata1 = arr(survdata)[:,::2]
+            survdata2 = arr(survdata)[:,1::2]
+
 
         dimer = loaddata1*loaddata2
 
@@ -1306,6 +1430,8 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
             loaddata = np.concatenate((loaddata1*(1-dimer),loaddata2*(1-dimer)),axis=1)
             survdata = np.concatenate((survdata1*(1-dimer),survdata2*(1-dimer)),axis=1)
 
+            return_loaddata = loaddata
+
     surv_prob = []
     surv_prob_uncertainty = []
     popt, pcov = [], []
@@ -1325,11 +1451,11 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
     for i in range(len(key)):
         aa = 0
         a = 0
-        for j in range(exp.reps):
+        for j in range(reps):
             # if (key.shape == (1)):
             for m in range(len(masks)):
-                atom1 = loaddata[i*exp.reps +j][m]
-                atom2 = survdata[i*exp.reps +j][m]
+                atom1 = loaddata[i*reps +j][m]
+                atom2 = survdata[i*reps +j][m]
                 if (atom1 and atom2):
                     aa += 1
                 if (atom1):
@@ -1489,6 +1615,8 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 print('x0, x1, a0, a1, sig0, sig1, y0')
                 print(popt)
                 print('err ', np.sqrt(np.diag(pcov)))
+                print('nbar: %.3f' %((popt[3]/popt[2])/(1-popt[3]/popt[2])))
+                print('trap freq: %.3f kHz' %((popt[1]-popt[0])/2))
 
             if fit == 'tripgaus':
                 # triplor(x, a0, a1, a2, kc, ks, x0, dx, y0)
@@ -1631,9 +1759,12 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 print('err ', np.sqrt(np.diag(pcov)))
 
             if fit == 'cos':
-                # dampedCos(t, A, tau, f, phi, y0): A*np.exp(-t/tau)/2 * (np.cos(2*np.pi*f*t+phi)) + y0
                 if (pguess == None):
-                    pguess = [1/((key_sorted[-1]-key_sorted[-1])), np.max(surv_prob_sorted)-np.min(surv_prob_sorted), 0, 0.5]
+                    f = 2/(key_sorted[-1]-key_sorted[0])
+                    A = np.max(surv_prob_sorted)-np.min(surv_prob_sorted)
+                    y0 = 0.5
+                    phi = np.arccos(2*(surv_prob_sorted[0]-y0)/A) - 2*np.pi*f*key_sorted[0]
+                    pguess = [f, A, phi, y0]
                 popt, pcov = curve_fit(cos, key_sorted, surv_prob_sorted, p0=pguess)
                 fitFunc = cos
                 print('f, A, phi, y0')
@@ -1805,7 +1936,7 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
     if (np.shape(key)[-1] == 3):
         return surv_prob_sorted_reshape, surv_prob_sorted_reshape_err, surv_prob, key0, key1, key2
     else:
-        return key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, popt, pcov
+        return key_sorted, surv_prob_sorted, surv_prob_uncertainty_sorted, popt, pcov, return_loaddata
 
 
 def get_multiexperiment_survival(dataAddress, runs, masks, tfixed, crop=[0,None,0,None],Nvalid=0,scripttype = "master"):
@@ -1969,7 +2100,7 @@ def get_site_load(exp, run, masks, t, crop=[0,None,0,None], size=[5, 5],output=T
     data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop)
     # data = data[img_idx::num_img]
     loaddata = data[keep_img[0]::num_img]
-    survdata = data[keep_img[1]::num_img]
+    #survdata = data[keep_img[1]::num_img]
 
     load_probs = []
     load_prob_uncertaintys = []
@@ -2328,7 +2459,7 @@ def getAtomCounts(exp, run, masks, threshold, sortkey=0, crop=[0,None,0,None],  
 
             if (plot):
                 key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
-                fig, ax = plt.subplots()
+                fig, ax = plt.subplots(figsize=[5,4])
                 if (fitFunc != None):
                     plt.plot(key_fine, fitFunc(key_fine, *popt), 'k-')
                 plt.plot(key_sorted, cs_mean_sorted, color='k', marker='o', linestyle=':', alpha=0.7)
@@ -2557,3 +2688,86 @@ def getMeanSpacingsAngles(ptsfit, rows=3, cols=16):
 
 def getArrayCenter(ptsfit, rows=3, cols=16):
     return np.mean(ptsfit[:,0]), np.mean(ptsfit[:,1])
+
+def getMasksForChimeraLoadOnly(pts, s, csize=5):
+    wmask=2.5
+    x = np.arange(s[0])
+    y = np.arange(s[1])
+
+    yy, xx = np.meshgrid(y, x)
+    masks = arr([psf(np.sqrt((yy-pts[i,0])**2+(xx-pts[i,1])**2), wmask) for i in range(len(pts))])
+    cropPts = arr([[int(round(pt[1])-csize), int(round(pt[1])+csize), int(round(pt[0])-csize), int(round(pt[0])+csize)] for pt in pts])
+    masksCropped = arr([mask[c[0]:c[1],c[2]:c[3]] for c, mask in zip(cropPts, masks)])
+    return masksCropped, cropPts, masks
+
+def getMasks(mimg, pts, mod2Dgauss=[2.0,2.0], wmask = 3, wmask2=1, mode = 'gauss',  output = True, coords = None,
+                     get_mask_centers = False):
+    """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
+
+    chor = mod2Dgauss[0]
+    cver = mod2Dgauss[1]
+    ptsfit = []
+    i = 0
+    # fig, ax = plt.subplots(figsize=[30,30])
+    for pt in pts:
+#        print(pt)
+        x1, x2, y1, y2 = int(pt[1]-chor), int(pt[1]+chor+1), int(pt[0]-cver), int(pt[0]+cver+1)
+        impt = mimg[y1:y2,x1:x2]
+
+        # ax = plt.subplot(10,2,i)
+        # plt.imshow(impt)
+        # plt.show()
+        #
+
+        ptfit = gaussFit2d_rot(impt)
+
+        if np.sqrt(np.diag(ptfit[2]))[0] <100:
+            ptsfit.append([int(pt[0]-cver)+ptfit[1][2],int(pt[1]-chor)+ptfit[1][1]])
+        else:
+            ptsfit.append(pt)
+    pts = np.array(ptsfit)
+    plt.show()
+
+    if output == True:
+        fig, ax = plt.subplots(figsize=[30,30])
+        plt.imshow(mimg)
+
+        if coords != None:
+            plt.plot(coords[1],coords[0],'r.')
+        else:
+
+            plt.plot(pts[:,1],pts[:,0],'r.')
+
+        plt.show()
+
+    x = np.arange(len(mimg[0]))
+    y = np.arange(len(mimg[:,0]))
+
+    xx, yy = np.meshgrid(x, y)
+
+    if mode == 'gauss':
+        masks = arr([psf(np.sqrt((xx-pts[i,1])**2+(yy-pts[i,0])**2), wmask) for i in range(len(pts))])
+        if coords != None:
+            masks = arr([psf(np.sqrt((xx-coords[1])**2+(yy-coords[0])**2), wmask) for i in range(len(pts))])
+    if mode == 'gaussEllipse':
+        masks = arr([psf_ellipse((xx-pts[i,1]),(yy-pts[i,0]), wmask2, wmask) for i in range(len(pts))])
+        if coords != None:
+            masks = arr([psf(np.sqrt((xx-coords[1])**2+(yy-coords[0])**2), wmask) for i in range(len(pts))])
+    if mode == 'box':
+        masks = arr([box(np.sqrt((xx-pts[i,1])**2+(yy-pts[i,0])**2), wmask) for i in range(len(pts))])
+    if output == True:
+        fig, ax = plt.subplots(figsize=[30,30])
+        plt.imshow(np.sum(masks, axis=0))
+        if coords != None:
+            plt.plot(coords[1],coords[0],'r.')
+        else:
+            plt.plot(pts[:,1],pts[:,0],'r.')
+
+        plt.show()
+
+    # plt.rcParams["figure.figsize"] = (5,4)
+
+    if (get_mask_centers == True):
+        return masks, pts
+    else:
+        return masks
