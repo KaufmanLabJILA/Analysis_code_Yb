@@ -176,11 +176,15 @@ class ExpFile:
         # A shortcut
         self.print_script(self.f['Gmoog-Parameters']['Gmoog-Script'])
 
-    def print_master_script_name(self):
+    def print_master_script_name(self,output = False):
         self.__print_ds(self.f['Master-Parameters']['Master-Script-File-Address'], "")
+        # if output:
+        #     return self.f['Master-Parameters']['Master-Script-File-Address']
 
-    def print_awg_script_name(self):
+    def print_awg_script_name(self,output = False):
         self.__print_ds(self.f['AWG-Parameters']['AWG-Script-File-Address'], "")
+        # if output:
+        #     return self.f['AWG-Parameters']['AWG-Script-File-Address']
 
     def print_variables(self):
         self.__print_hdf5_obj(self.f['Master-Parameters']['Variables'],'')

@@ -6,6 +6,7 @@ from .mathutil import *
 # from .plotutil import *
 from .imagutil import *
 import time
+import cv2
 
 import klib.experiment_constants as exc
 
@@ -68,6 +69,7 @@ def var_scan_sumcounts(exp, run, masks, fit='none'):
         popt, pcov = curve_fit(gaussian, key_sorted, patom_sorted, p0=pguess)
 
         print('key fit = {:.3e}'.format(popt[1]))
+
 
     if fit == 'gaussian_dip':
         pguess = [-np.max(patom_sorted)+np.min(patom_sorted),
@@ -748,6 +750,51 @@ def get_binarized(exp, run, masks, threshold, crop=[0,None,0,None], mode = 'none
 
     return binarized
 
+def get_masks_cmos(imgc,array_pattern,atom_spacing,threshold):
+    #Start scanning the image from the left for the brightest pixel, use a combination of numpy and CV2 for this
+    ridx = 1
+    atomlocx_array = []
+    atomlocy_array = []
+    masks = []
+    pts = []
+    print_state = True
+    masked_image = np.zeros(imgc.shape)
+    while ridx<imgc.shape[0]-1:
+        if (np.max(imgc[ridx,:])>np.max(imgc[ridx-1,:]) and np.max(imgc[ridx,:])>np.max(imgc[ridx+1,:]) and np.max(imgc[ridx,:])>threshold):
+            atomlocx_array.append(ridx)
+            atomlocy_array.append(np.argmax(imgc[ridx,:]))
+            pts.append([atomlocx_array[-1],atomlocy_array[-1]])
+            masked_image[atomlocx_array[-1], atomlocy_array[-1]] = 1
+            masks.append(masked_image)
+            masked_image = np.zeros(imgc.shape)
+            try:
+                neighbours = array_pattern.pop()
+            except:
+                print("Increase Count Threshold")
+                print_state = False
+                break
+                
+            for nn in range(neighbours-1):
+                atomlocx_array.append(ridx + (nn+1)*atom_spacing+nn+1)
+                #atomlocy_array.append(np.argmax(meanimg[:,ridx + (nn+1)*atom_spacing+nn+1]))
+                atomlocy_array.append(atomlocy_array[-1])
+                masked_image[atomlocx_array[-1], atomlocy_array[-1]] = 1
+                pts.append([atomlocx_array[-1],atomlocy_array[-1]])
+                masks.append(masked_image)
+                masked_image = np.zeros(imgc.shape)
+            ridx += (neighbours-1)*atom_spacing+neighbours
+        ridx += 1
+
+    if (print_state):
+        plt.figure(dpi=100)
+        plt.imshow(imgc.transpose())
+        plt.scatter(atomlocx_array,atomlocy_array, color = 'red', s = 2)
+        plt.show()
+        plt.figure(dpi=100)
+        imgcmask = (imgc - np.mean(imgc[:10, :10]))*np.sum(masks,axis=0)
+        plt.imshow(imgcmask.transpose())
+        return masks, pts
+
 def get_masks(imgc, x0=21, y0=14, dx=7, dy=11, N=[4,4], r=2):
     x = np.arange(len(imgc[0]))
     y = np.arange(len(imgc[:,0]))
@@ -842,7 +889,7 @@ def get_loss3(exp, run, masks, t, sortkey=0, crop=[0,None,0,None], output=True, 
     return (vaa+vav+vva)/npair, ava, avv, (vaa+vav+vva), vvv, surv, surv_err, data
 
 def getMasksManual(mimg,mimg2 = False, red_x=0,red_y = 0,blue_x=0,blue_y = 0,xoffset=0, yoffset=0, fftN = 2000, N = 10, wmask = 3, supersample = None, mode = 'gauss', FFT = True,
-                   peakParams = [10,10], output = True, coords = None, mindist=100, disttozero=[50,100,100], get_mask_centers = False, mod2Dgauss = False, peaknumx = 0, peaknumy = 0):
+                   peakParams = [10,10], output = True, coords = None, mindist=100, disttozero=[50,100,100], get_mask_centers = False, mod2Dgauss = False, peaknumx = 0, peaknumy = 0,wmask2 =3):
     """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
 
     if FFT:
@@ -1036,6 +1083,10 @@ def getMasksManual(mimg,mimg2 = False, red_x=0,red_y = 0,blue_x=0,blue_y = 0,xof
             masks = arr([psf(np.sqrt((xx-coords[1])**2+(yy-coords[0])**2), wmask) for i in range(len(pts))])
     if mode == 'box':
         masks = arr([box(np.sqrt((xx-pts[i,1])**2+(yy-pts[i,0])**2), wmask) for i in range(len(pts))])
+    if mode == 'gaussEllipse':
+        masks = arr([psf_ellipse((xx-pts[i,1]),(yy-pts[i,0]), wmask2, wmask) for i in range(len(pts))])
+        if coords != None:
+            masks = arr([psf(np.sqrt((xx-coords[1])**2+(yy-coords[0])**2), wmask) for i in range(len(pts))])
     if output == True:
         plt.imshow(np.sum(masks, axis=0))
         if coords != None:
@@ -1078,7 +1129,7 @@ def gaussFit2d_rot(datc):
     return zpred.reshape(datc.shape[0],datc.shape[1]), pred_params, uncert_cov
 
 def getMasksGuessPts(mimg, pts, mod2Dgauss=[2.0,2.0], wmask = 3, mode = 'gauss',  output = True, coords = None,
-                     get_mask_centers = False):
+                     get_mask_centers = False,wmask2 = 3):
     """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
 
     chor = mod2Dgauss[0]
@@ -1120,6 +1171,10 @@ def getMasksGuessPts(mimg, pts, mod2Dgauss=[2.0,2.0], wmask = 3, mode = 'gauss',
             masks = arr([psf(np.sqrt((xx-coords[1])**2+(yy-coords[0])**2), wmask) for i in range(len(pts))])
     if mode == 'box':
         masks = arr([box(np.sqrt((xx-pts[i,1])**2+(yy-pts[i,0])**2), wmask) for i in range(len(pts))])
+    if mode == 'gaussEllipse':
+        masks = arr([psf_ellipse((xx-pts[i,1]),(yy-pts[i,0]), wmask2, wmask) for i in range(len(pts))])
+        if coords != None:
+            masks = arr([psf(np.sqrt((xx-coords[1])**2+(yy-coords[0])**2), wmask) for i in range(len(pts))])
     if output == True:
         fig, ax = plt.subplots(figsize=[20,20])
         plt.imshow(np.sum(masks, axis=0))
@@ -1228,12 +1283,23 @@ def get_loss(exp, run, masks, t, sortkey=0, crop=[0,None,0,None], output=True, k
 
     return va/npair, aa, av, va, vv, surv, surv_err, data
 
-def var_scan_loadprob(exp, run, masks, t, fit='none', sortkey=0, crop=[0,None,0,None], fullscale=True, img_idx = 0, mode='emccd', skipFirst=False):
+def var_scan_loadprob(exp, run, masks, t, fit='none', sortkey=0, crop=[0,None,0,None], fullscale=True, img_idx = 0, 
+                      mode='emccd', skipFirst=False, postselection=False, order='2'):
 
     num_img = int(exp.pics.shape[0]/exp.reps/len(exp.key))
     data = get_binarized(exp, run, masks=masks, threshold=t, crop=crop, mode=mode)
 
-    data = data[img_idx::num_img]
+    loaddata = data[img_idx::num_img]
+    
+    if postselection != False:
+        if order == '1':
+            loaddata1 = arr(loaddata)[:,:masks.shape[0]//2]
+            loaddata2 = arr(loaddata)[:,masks.shape[0]//2:masks.shape[0]]
+        elif order == '2':
+            loaddata1 = arr(loaddata)[:,::2]
+            loaddata2 = arr(loaddata)[:,1::2]
+
+        loaddata = loaddata1*loaddata2*2 #factor of two account for fact that there is len(masks)/2 number of doublons
 
     if (exp.key.ndim > 1):
         key = exp.key[:, sortkey]
@@ -1243,7 +1309,7 @@ def var_scan_loadprob(exp, run, masks, t, fit='none', sortkey=0, crop=[0,None,0,
     patom = []
     patom_err = []
     for i in range(len(exp.key)):
-        p = np.sum(data[i*exp.reps : (i + 1)*exp.reps])/exp.reps/len(masks)
+        p = np.sum(loaddata[i*exp.reps : (i + 1)*exp.reps])/exp.reps/len(masks)
         patom.append(p)
         patom_err.append(np.sqrt(p*(1-p)/exp.reps/len(masks)))
 
@@ -1351,6 +1417,40 @@ def var_scan_loadprob(exp, run, masks, t, fit='none', sortkey=0, crop=[0,None,0,
         return patom_sorted
     else:
         return key_sorted, patom_sorted
+    
+
+def get_threshold_data(exp, run, masks, t):
+    crop = [0,None,0,None]
+    data = get_binarized(exp, run, masks=masks, threshold=[t,t], crop=crop, mode='emccd')
+    num_img = int(exp.pics.shape[0]/exp.reps/len(exp.key))
+    data = data
+    key = exp.key
+    key_name = exp.key_name
+    reps = exp.reps
+    loaddata = data[0::num_img]
+    return_loaddata = loaddata
+    survdata = data[1::num_img]
+
+    for i in range(len(key)):
+        aa = 0
+        av = 0
+        va = 0
+        a = 0
+        for j in range(reps):
+            # if (key.shape == (1)):
+            for m in range(len(masks)):
+                atom1 = loaddata[i*reps +j][m]
+                atom2 = survdata[i*reps +j][m]
+                if (atom1 and atom2):
+                    aa += 1
+                if (atom1 and (1-atom2)):
+                    av += 1
+                if (atom2 and (1-atom1)):
+                    va += 1
+                if (atom1):
+                    a += 1
+    return av,va
+
 
 def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,None,0,None], pguess=None, multiScan=False, fullscale=True, plot=True, keep_img=[0,1], mode='emccd', skip=False,
                       postselection = False,parity = False, skipFirst=False, skipReps = None, order ='2',cutnum = False):
@@ -1502,7 +1602,7 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
             plt.show()
 
     if (np.shape(key)[-1] == 3):
-
+        print('3D Scan')
         surv_prob_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key), surv_prob))), key=lambda x: [x[0], x[1], x[2]]))
         surv_prob_sorted_reshape = np.reshape(surv_prob_sorted[:,3], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1])), len(np.unique(key[:, 2]))))
         surv_prob_uncertainty_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key),surv_prob_uncertainty))), key=lambda x: [x[0], x[1], x[2]]))
@@ -1536,9 +1636,9 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                           0]
                 popt, pcov = curve_fit(line, key_sorted, surv_prob_sorted, p0=pguess)
                 fitFunc = line
-                print('a, b')
-                print(popt)
-                print('key fit = {:.5e} +/- {:.5e}'.format(popt[0], np.sqrt(np.diag(pcov))[0]))
+                err = np.sqrt(np.diag(pcov))
+                print('a: {:.4f} +/- {:.4f}'.format(popt[0],err[0]))
+                print('b: {:.4f} +/- {:.4f}'.format(popt[1],err[1]))
 
 
 
@@ -1549,8 +1649,11 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                           np.min(surv_prob_sorted)]
                 popt, pcov = curve_fit(gaussian, key_sorted, surv_prob_sorted, p0=pguess)
                 fitFunc = gaussian
-                print('key fit = {:.5e} +/- {:.5e}'.format(popt[1], np.sqrt(np.diag(pcov))[1]))
-                print(popt)
+                err = np.sqrt(np.diag(pcov))
+                print('a: {:.4f} +/- {:.4f}'.format(popt[0],err[0]))
+                print('x0: {:.4f} +/- {:.4f}'.format(popt[1],err[1]))
+                print('sig: {:.4f} +/- {:.4f}'.format(popt[2],err[2]))
+                print('y0: {:.4f} +/- {:.4f}'.format(popt[3],err[3]))
 
             if fit == 'gaussian_dip':
                 pguess = [-np.max(surv_prob_sorted)+np.min(surv_prob_sorted),
@@ -1559,9 +1662,11 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                           np.max(surv_prob_sorted)]
                 popt, pcov = curve_fit(gaussian, key_sorted, surv_prob_sorted, p0=pguess)
                 fitFunc = gaussian
-                print('a, x0, sig, y0')
-                print(popt)
-                print('key fit = {:.5e} +/- {:.5e}'.format(popt[1], np.sqrt(np.diag(pcov))[1]))
+                err = np.sqrt(np.diag(pcov))
+                print('a: {:.4f} +/- {:.4f}'.format(popt[0],err[0]))
+                print('x0: {:.4f} +/- {:.4f}'.format(popt[1],err[1]))
+                print('sig: {:.4f} +/- {:.4f}'.format(popt[2],err[2]))
+                print('y0: {:.4f} +/- {:.4f}'.format(popt[3],err[3]))
 
             if fit == 'doublegaussian_dip':
                 if (pguess == None):
@@ -1615,7 +1720,12 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 print('x0, x1, a0, a1, sig0, sig1, y0')
                 print(popt)
                 print('err ', np.sqrt(np.diag(pcov)))
+                errArray = np.sqrt(np.diag(pcov))
+                drbr = errArray[3]/popt[3]+errArray[2]/popt[2]
+                print(drbr)
+                dnbn = drbr*(1+(popt[3]/popt[2])/(1-popt[3]/popt[2]))
                 print('nbar: %.3f' %((popt[3]/popt[2])/(1-popt[3]/popt[2])))
+                print('dnbar: %.4f' %(dnbn*(popt[3]/popt[2])/(1-popt[3]/popt[2])))
                 print('trap freq: %.3f kHz' %((popt[1]-popt[0])/2))
 
             if fit == 'tripgaus':
@@ -1628,7 +1738,7 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 fitFunc = tripgaus
                 print('a0, a1, a2, sc, ss, x0, dx, y0')
                 print(popt)
-                print('red sideband freq:', popt[5]+abs(popt[6]))
+                print('sideband freq: %.1f +- %.1f kHz' %(popt[6]*1e3, np.sqrt(np.diag(pcov)[6])*1e3))
 
             if fit == 'tripgaus_letting_the_peaks_roam_free':
                 # tripgaus_letting_the_peaks_roam_free(x, a0, a1, a2, sc, ss, x0, x1, x2, y0)
@@ -1642,6 +1752,18 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 fitFunc = tripgaus_letting_the_peaks_roam_free
                 print('a0, a1, a2, sc, ss, x0, x1, x2, y0')
                 print(popt)
+
+            if fit == 'fourgaussian':
+                if (pguess == None):
+                    pguess = [70, 75, 80, 85, -0.5, -0.5, -0.5, -0.5, 1, 1, 1, 1, 1]
+                popt, pcov = curve_fit(fourgaussian, key_sorted, surv_prob_sorted, p0=pguess)
+                fitFunc = fourgaussian
+                print('x1, x2, x3, x4, a1, a2, a3, a4, s1, s2, s3, s4, y0')
+                print(popt)
+                x1, x2, x3, x4 = popt[0], popt[1], popt[2], popt[3]
+                err = np.sqrt(np.diag(pcov))
+                e1, e2, e3, e4 = err[0], err[1], err[2], err[3]
+                print('peak pos: \n %.2f+-%.2f \n %.2f+-%.2f \n %.2f+-%.2f \n %.2f+-%.2f' %(x1, e1, x2, e2, x3, e3, x4, e4))
 
             if fit == 'quadgaus':
                 # triplor(x, a0, a1, a2, kc, ks, x0, dx, y0)
@@ -1754,9 +1876,12 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                               0]
                 popt, pcov = curve_fit(dampedCos, key_sorted, surv_prob_sorted, p0=pguess, bounds=(0,[1, 1e6, 1e9, 2*np.pi, 0.8]))
                 fitFunc = dampedCos
-                print(' A, tau, f, phi, y0')
-                print(popt)
-                print('err ', np.sqrt(np.diag(pcov)))
+                err = np.sqrt(np.diag(pcov))
+                print('A: {:.4f} +/- {:.4f}'.format(popt[0],err[0]))
+                print('tau: {:.4f} +/- {:.4f}'.format(popt[1],err[1]))
+                print('f: {:.4f} +/- {:.4f}'.format(popt[2],err[2]))
+                print('phi: {:.4f} +/- {:.4f}'.format(popt[3],err[3]))
+                print('y0: {:.4f} +/- {:.4f}'.format(popt[4],err[4]))
 
             if fit == 'cos':
                 if (pguess == None):
@@ -1767,9 +1892,12 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                     pguess = [f, A, phi, y0]
                 popt, pcov = curve_fit(cos, key_sorted, surv_prob_sorted, p0=pguess)
                 fitFunc = cos
-                print('f, A, phi, y0')
-                print(popt)
-                print('err ', np.sqrt(np.diag(pcov)))
+                err = np.sqrt(np.diag(pcov))
+                print('f: {:.4f} +/- {:.4f}'.format(popt[0],err[0]))
+                print('A: {:.4f} +/- {:.4f}'.format(popt[1],err[1]))
+                print('phi: {:.4f} +/- {:.4f}'.format(popt[2],err[2]))
+                print('y0: {:.4f} +/- {:.4f}'.format(popt[3],err[3]))
+
 
             if fit == 'cosRam':
                 # dampedCos(t, A, tau, f, phi, y0): A*np.exp(-t/tau)/2 * (np.cos(2*np.pi*f*t+phi)) + y0
@@ -1790,7 +1918,13 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 popt, pcov = curve_fit(gausCos, key_sorted, surv_prob_sorted, p0=pguess, bounds=(0,[1, 1e6, 1e9, 2*np.pi, 1]))
                 sig = np.sqrt(2)*popt[1]
                 fitFunc = gausCos
-                print(' A, sig, f, phi, y0')
+                err = np.sqrt(np.diag(pcov))
+                print('flip num: {:.4f} +/- {:.4f}'.format(np.sqrt(2)*popt[2]*popt[1],np.sqrt(2)*popt[2]*popt[1]*np.sqrt((err[2]/popt[2])**2+(err[1]/popt[1])**2+2*pcov[1,2]/popt[2]/popt[1]))) 
+                print('A: {:.4f} +/- {:.4f}'.format(popt[0],err[0]))
+                print('tau: {:.4f} +/- {:.4f}'.format(popt[1],err[1]))
+                print('f: {:.4f} +/- {:.4f}'.format(popt[2],err[2]))
+                print('phi: {:.4f} +/- {:.4f}'.format(popt[3],err[3]))
+                print('y0: {:.4f} +/- {:.4f}'.format(popt[4],err[4]))
 
                 print(popt)
 
@@ -1906,7 +2040,7 @@ def var_scan_survprob(exp, run, masks, t, fit='none', sortkey=[0,1], crop=[0,Non
                 print('err ', np.sqrt(np.diag(pcov)))
 
             if (plot):
-                key_fine = np.linspace(key_sorted[0], key_sorted[-1], 200, endpoint=True)
+                key_fine = np.linspace(key_sorted[0], key_sorted[-1], 100000, endpoint=True)
                 fig, ax = plt.subplots(figsize=(5,4))
                 if (fitFunc != None):
                     plt.plot(key_fine, fitFunc(key_fine, *popt), 'k-')
@@ -1979,6 +2113,265 @@ def get_multiexperiment_survival(dataAddress, runs, masks, tfixed, crop=[0,None,
     s = np.array(s)
     serr = np.array(serr)
     return aas, avs, vas, vvs, s, serr, scriptnames
+
+def rearrangeSuccessScan(exp, run, Ny, Nx, fitFunc, pguess):
+    file = h5.File('Raw Data/data_'+str(run)+'.h5', 'r')
+    ppics = arr(file['Andor']['Processed-Pictures'])
+    reps = exp.reps
+    key = exp.key
+    key_name = exp.key_name
+    ps = []
+    ps_uncertainty = []
+    for j in range(len(exp.key)):
+        na = 0
+        ns = 0
+        for i in range(0,exp.reps):
+            pic1 = ppics[2*i + 2*j*exp.reps].reshape((Ny,Nx))
+            pic2 = ppics[2*i + 2*j*exp.reps + 1].reshape((Ny,Nx))
+            for row in range(len(pic1)):
+                nar = np.sum(pic1[row,:])
+                nsr = np.sum(pic2[row,-nar:])
+                na += nar
+                ns += nsr
+        ps.append(ns/na)
+        ps_uncertainty.append(np.sqrt((ns/na)*(1-ns/na)/na))
+
+    if (np.shape(key)[-1] == 2):
+
+        ps_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key), ps))), key=lambda x: [x[0], x[1]]))
+        ps_sorted_reshape = np.reshape(ps_sorted[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+        ps_sorted_uncertainty = np.array(sorted(np.transpose(np.vstack((np.transpose(key),ps_uncertainty))), key=lambda x: [x[0], x[1]]))
+        ps_sorted_uncertainty_reshape = np.reshape(ps_sorted_uncertainty[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+
+        k0min = np.min(ps_sorted[:,0])
+        k0max = np.max(ps_sorted[:,0])
+        k1min = np.min(ps_sorted[:,1])
+        k1max = np.max(ps_sorted[:,1])
+        key0 = np.sort(np.unique(ps_sorted[:,0]))
+        key1 = np.sort(np.unique(ps_sorted[:,1]))
+
+
+        fig, ax = plt.subplots(figsize=[5,4])
+        # if (fullscale==True):
+        #     im = plt.imshow(ps_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+        #                 aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+
+        im = plt.imshow(ps_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+                        aspect=(k1max - k1min)/(k0max - k0min), origin="lower")
+        plt.xlabel(key_name[1])
+        plt.ylabel(key_name[0])
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel('scrunchx_success_Prob')
+        plt.title(str(exp.data_addr) + "\data_" + str(run) + ".h5")
+        plt.show()
+        return key0, ps_sorted
+    else:
+        ps_sorted = np.array(ps)[np.argsort(key)]
+        ps_sorted_uncertainty = np.array(ps_uncertainty)[np.argsort(key)]
+        key_sorted = np.sort(key)
+
+        plt.errorbar(key_sorted, ps_sorted, yerr=ps_sorted_uncertainty, c='k', linestyle=':', marker='o', alpha=0.7)
+        plt.xlabel(exp.key_name)
+        plt.ylabel('scrunchX success prob')
+        if fitFunc:
+            popt,pcov = curve_fit(fitFunc, key_sorted, ps_sorted, sigma=ps_sorted_uncertainty, p0=pguess)
+            x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+            y = fitFunc(x, *popt)
+            plt.plot(x, y, 'k-')
+            print('fit:', fitFunc)
+            print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+        print('mean:', np.mean(ps_sorted));
+        return key_sorted, ps_sorted
+
+def rearrangeArraySuccessScan(exp, run, Ny, Nx, fitFunc1=None, fitFunc2=None, pguess1=None, pguess2=None):
+    file = h5.File('Raw Data/data_'+str(run)+'.h5', 'r')
+    ppics = arr(file['Andor']['Processed-Pictures'])
+    reps = exp.reps
+    key = exp.key
+    key_name = exp.key_name
+    ps = []
+    ps_uncertainty = []
+    array_s = []
+    for j in range(len(exp.key)):
+        na = 0
+        ns = 0
+        count_success = 0
+        for i in range(0,exp.reps):
+            count_success_rows = 0
+            pic1 = ppics[2*i + 2*j*exp.reps].reshape((Ny,Nx))
+            pic2 = ppics[2*i + 2*j*exp.reps + 1].reshape((Ny,Nx))
+            for row in range(len(pic1)):
+                nar = np.sum(pic1[row,:])
+                nsr = np.sum(pic2[row,-nar:])
+                if nar == nsr:
+                    count_success_rows += 1
+                na += nar
+                ns += nsr
+            if count_success_rows == len(pic1):
+                count_success += 1
+        ps.append(ns/na)
+        array_s.append(count_success/exp.reps)
+        ps_uncertainty.append(np.sqrt((ns/na)*(1-ns/na)/na))
+
+
+
+    if (np.shape(key)[-1] == 2):
+
+        ps_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key), ps))), key=lambda x: [x[0], x[1]]))
+        array_s_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key), array_s))), key=lambda x: [x[0], x[1]]))
+        ps_sorted_reshape = np.reshape(ps_sorted[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+        array_s_sorted_reshape = np.reshape(array_s_sorted[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+        ps_sorted_uncertainty = np.array(sorted(np.transpose(np.vstack((np.transpose(key),ps_uncertainty))), key=lambda x: [x[0], x[1]]))
+        ps_sorted_uncertainty_reshape = np.reshape(ps_sorted_uncertainty[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+
+        k0min = np.min(ps_sorted[:,0])
+        k0max = np.max(ps_sorted[:,0])
+        k1min = np.min(ps_sorted[:,1])
+        k1max = np.max(ps_sorted[:,1])
+        key0 = np.sort(np.unique(ps_sorted[:,0]))
+        key1 = np.sort(np.unique(ps_sorted[:,1]))
+
+
+        fig, ax = plt.subplots(figsize=[5,4])
+        # if (fullscale==True):
+        #     im = plt.imshow(ps_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+        #                 aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+
+        im = plt.imshow(array_s_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+                        aspect=(k1max - k1min)/(k0max - k0min), origin="lower")
+        plt.xlabel(key_name[1])
+        plt.ylabel(key_name[0])
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel('scrunchx_success_Prob')
+        plt.title(str(exp.data_addr) + "\data_" + str(run) + ".h5")
+        plt.show()
+        return key0, ps_sorted
+    else:
+        ps_sorted = np.array(ps)[np.argsort(key)]
+        array_s_sorted = np.array(array_s)[np.argsort(key)]
+        ps_sorted_uncertainty = np.array(ps_uncertainty)[np.argsort(key)]
+        key_sorted = np.sort(key)
+
+        plt.errorbar(key_sorted, ps_sorted, yerr=ps_sorted_uncertainty, c='k', linestyle=':', marker='o', alpha=0.7, label='atom-move success')
+        plt.plot(key_sorted, array_s_sorted, c='r', linestyle=':', marker='o', alpha=0.7, label='defect-free array')
+        plt.xlabel(exp.key_name)
+        plt.ylabel('scrunchX success prob')
+        plt.legend(bbox_to_anchor=(1,1))
+        plt.ylim(0,1)
+        plt.title(str(exp.data_addr) + "\data_" + str(run) + ".h5")
+        if fitFunc1:
+            popt,pcov = curve_fit(fitFunc1, key_sorted, ps_sorted, sigma=ps_sorted_uncertainty, p0=pguess1)
+            x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+            y = fitFunc1(x, *popt)
+            plt.plot(x, y, 'k-')
+            print('fit:', fitFunc1)
+            print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+        if fitFunc2:
+            popt,pcov = curve_fit(fitFunc2, key_sorted, ps_sorted, sigma=ps_sorted_uncertainty, p0=pguess2)
+            x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+            y = fitFunc2(x, *popt)
+            plt.plot(x, y, 'k-')
+            print('fit:', fitFunc2)
+            print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+        print('mean atom-move success:', np.mean(ps_sorted));
+        print('mean defect-free array:', np.mean(array_s_sorted));
+        return key_sorted, array_s_sorted, ps_sorted
+
+
+def rearrangeArraySuccessScanPerRow(exp, run, Ny, Nx, fitFunc1=None, fitFunc2=None, pguess1=None, pguess2=None, rowSelect = 0):
+    file = h5.File('Raw Data/data_'+str(run)+'.h5', 'r')
+    ppics = arr(file['Andor']['Processed-Pictures'])
+    reps = exp.reps
+    key = exp.key
+    key_name = exp.key_name
+    ps = []
+    ps_uncertainty = []
+    #Dummy pic
+    picDummy = ppics[2*0 + 2*0*exp.reps].reshape((Ny,Nx))
+    array_s = np.zeros((len(exp.key),len(picDummy)), dtype = 'float')
+    for j in range(len(exp.key)):
+        na = 0
+        ns = 0
+        for i in range(0,exp.reps):
+            pic1 = ppics[2*i + 2*j*exp.reps].reshape((Ny,Nx))
+            pic2 = ppics[2*i + 2*j*exp.reps + 1].reshape((Ny,Nx))
+            for row in range(len(pic1)):
+                nar = np.sum(pic1[row,:])
+                nsr = np.sum(pic2[row,-nar:])
+                if nar == nsr:
+                    array_s[j,row] += 1
+                na += nar
+                ns += nsr
+        ps.append(ns/na)
+
+        ps_uncertainty.append(np.sqrt((ns/na)*(1-ns/na)/na))
+    array_s /= exp.reps
+
+
+
+    if (np.shape(key)[-1] == 2):
+
+        ps_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key), ps))), key=lambda x: [x[0], x[1]]))
+        array_s_sorted = np.array(sorted(np.transpose(np.vstack((np.transpose(key), array_s[:,rowSelect]))), key=lambda x: [x[0], x[1]]))
+        ps_sorted_reshape = np.reshape(ps_sorted[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+        array_s_sorted_reshape = np.reshape(array_s_sorted[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+        ps_sorted_uncertainty = np.array(sorted(np.transpose(np.vstack((np.transpose(key),ps_uncertainty))), key=lambda x: [x[0], x[1]]))
+        ps_sorted_uncertainty_reshape = np.reshape(ps_sorted_uncertainty[:,2], (len(np.unique(key[:, 0])), len(np.unique(key[:, 1]))))
+
+        k0min = np.min(ps_sorted[:,0])
+        k0max = np.max(ps_sorted[:,0])
+        k1min = np.min(ps_sorted[:,1])
+        k1max = np.max(ps_sorted[:,1])
+        key0 = np.sort(np.unique(ps_sorted[:,0]))
+        key1 = np.sort(np.unique(ps_sorted[:,1]))
+
+
+        fig, ax = plt.subplots(figsize=[5,4])
+        # if (fullscale==True):
+        #     im = plt.imshow(ps_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+        #                 aspect=(k1max - k1min)/(k0max - k0min), vmin=0, vmax=1, origin="lower")
+
+        im = plt.imshow(array_s_sorted_reshape, extent=[k1min, k1max, k0min, k0max],
+                        aspect=(k1max - k1min)/(k0max - k0min), origin="lower")
+        plt.xlabel(key_name[1])
+        plt.ylabel(key_name[0])
+        cbar = plt.colorbar(im)
+        cbar.ax.set_ylabel('scrunchx_success_Prob')
+        plt.title(str(exp.data_addr) + "\data_" + str(run) + ".h5")
+        plt.show()
+        return key0, ps_sorted
+    else:
+        ps_sorted = np.array(ps)[np.argsort(key)]
+        array_s_sorted = np.array(array_s[:,rowSelect])[np.argsort(key)]
+        ps_sorted_uncertainty = np.array(ps_uncertainty)[np.argsort(key)]
+        key_sorted = np.sort(key)
+
+        plt.errorbar(key_sorted, ps_sorted, yerr=ps_sorted_uncertainty, c='k', linestyle=':', marker='o', alpha=0.7, label='atom-move success')
+        plt.plot(key_sorted, array_s_sorted, c='r', linestyle=':', marker='o', alpha=0.7, label='defect-free array')
+        plt.xlabel(exp.key_name)
+        plt.ylabel('scrunchX success prob')
+        plt.legend(bbox_to_anchor=(1,1))
+        plt.ylim(0,1)
+        if fitFunc1:
+            popt,pcov = curve_fit(fitFunc1, key_sorted, ps_sorted, sigma=ps_sorted_uncertainty, p0=pguess1)
+            x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+            y = fitFunc1(x, *popt)
+            plt.plot(x, y, 'k-')
+            print('fit:', fitFunc1)
+            print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+        if fitFunc2:
+            popt,pcov = curve_fit(fitFunc2, key_sorted, ps_sorted, sigma=ps_sorted_uncertainty, p0=pguess2)
+            x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+            y = fitFunc2(x, *popt)
+            plt.plot(x, y, 'k-')
+            print('fit:', fitFunc2)
+            print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+        print('mean atom-move success:', np.mean(ps_sorted));
+        print('mean defect-free array:', np.mean(array_s_sorted));
+        return key_sorted, array_s_sorted, ps_sorted
+
+
+
 
 
 def get_site_survival(exp, run, masks, t, crop=[0,None,0,None], size=[5,5], output=True,fullscale=True, keep_img=[0,1], mode='emccd'):
@@ -2138,11 +2531,11 @@ def get_site_load(exp, run, masks, t, crop=[0,None,0,None], size=[5, 5],output=T
     if output==True:
         if fullscale == True:
             plt.figure()
-            plt.imshow(load_probs_sorted[0].reshape(size[0],size[1]), origin='lower', vmin=0, vmax=1)
+            plt.imshow(np.mean(load_probs_sorted, axis=0).reshape(size[0],size[1]), origin='lower', vmin=0, vmax=1)
             plt.colorbar()
         else:
             plt.figure()
-            plt.imshow(load_probs_sorted[0].reshape(size[0],size[1]), origin='lower', vmin=np.min(load_probs_sorted[0]), vmax=np.max(load_probs_sorted[0]))
+            plt.imshow(np.mean(load_probs_sorted, axis=0).reshape(size[0],size[1]), origin='lower', vmin=np.min(np.mean(load_probs_sorted, axis=0)), vmax=np.max(np.mean(load_probs_sorted, axis=0)))
             plt.colorbar()
 
     return key_sorted, load_probs_sorted, load_prob_uncertaintys_sorted
@@ -2429,8 +2822,11 @@ def getAtomCounts(exp, run, masks, threshold, sortkey=0, crop=[0,None,0,None],  
                 pguess = [key_sorted[-1]/5, np.max(cs_mean_sorted)-np.min(cs_mean_sorted), np.min(cs_mean_sorted)]
                 popt, pcov = curve_fit(decayt, key_sorted, cs_mean_sorted, p0=pguess)
                 fitFunc = decayt
-                print('tau, a, y0 ', popt)
-                print('err ', np.sqrt(np.diag(pcov)))
+                err = np.sqrt(np.diag(pcov))
+                print('tau: {:.3f} +/- {:.3f}'.format(popt[0],err[0]))
+                print('a: {:.3f} +/- {:.3f}'.format(popt[1],err[1]))
+                print('y0: {:.3f} +/- {:.3f}'.format(popt[2],err[2]))
+              
 
             if fit == 'decayt_gaussian':
                 # decayt(t, tau, a, y0): y0 + a*np.exp(-t/tau)
@@ -2700,6 +3096,59 @@ def getMasksForChimeraLoadOnly(pts, s, csize=5):
     masksCropped = arr([mask[c[0]:c[1],c[2]:c[3]] for c, mask in zip(cropPts, masks)])
     return masksCropped, cropPts, masks
 
+
+def getMasksForChimeraLoadOnlyCMOS(pts, s, masks, csize=1):
+    wmask=2.5
+    x = np.arange(s[0])
+    y = np.arange(s[1])
+
+    yy, xx = np.meshgrid(y, x)
+    # masks = arr([psf(np.sqrt((yy-pts[i,0])**2+(xx-pts[i,1])**2), wmask) for i in range(len(pts))])
+    cropPts = arr([[int(round(pt[1])-csize), int(round(pt[1])+csize), int(round(pt[0])-csize), int(round(pt[0])+csize)] for pt in pts])
+    masksCropped = arr([mask[c[0]:c[1],c[2]:c[3]] for c, mask in zip(cropPts, masks)])
+    return masksCropped, cropPts, masks
+
+
+def findThreshold(image,numAtoms):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    #80 can be set as lower bound since before this its mostly noise
+    for i in range(79,255):
+        _, thresholded = cv2.threshold(gray, i, 255, cv2.THRESH_BINARY)
+
+        # Find contours
+        contours, _ = cv2.findContours(thresholded, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        if len(contours) == numAtoms:
+            return i
+        else:
+            pass
+    return i
+
+def display_image(img, title="Image"):
+    '''Display image using matplotlib'''
+    plt.figure(figsize=(50,50))
+    # plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))  # Convert from BGR to RGB
+    plt.imshow(img)  # Convert from BGR to RGB
+    plt.title(title)
+    plt.axis('off')
+    plt.show()
+
+def display_histogram(image):
+    '''Display histogram for a grayscale image'''
+    plt.hist(image.ravel(), 256, [0,256])
+    plt.title('Histogram')
+    plt.xlabel('Pixel Intensity')
+    plt.ylabel('Frequency')
+    plt.show()
+
+
+def apply_threshold(threshold_value):
+    _, thresholded = cv2.threshold(gray, threshold_value, 255, cv2.THRESH_BINARY)
+    display_image(thresholded, 'Thresholded Image using Otsu’s Binarization')
+
+
+
+
 def getMasks(mimg, pts, mod2Dgauss=[2.0,2.0], wmask = 3, wmask2=1, mode = 'gauss',  output = True, coords = None,
                      get_mask_centers = False):
     """Given an averaged atom image, returns list of masks, where each mask corresponds to the appropriate mask for a single atom."""
@@ -2771,3 +3220,157 @@ def getMasks(mimg, pts, mod2Dgauss=[2.0,2.0], wmask = 3, wmask2=1, mode = 'gauss
         return masks, pts
     else:
         return masks
+
+
+def ArbRearrangeSuccess(exp, run, masks, target, fitFunc1=None, fitFunc2=None, pguess1=None, pguess2=None, fullscale=True, plot=[0,1,2], num_pics=2):
+    file = h5.File('Raw Data/data_'+str(run)+'.h5', 'r')
+    ppics = arr(file['Andor']['Processed-Pictures'])
+    reps = exp.reps
+    key = exp.key
+    key_name = exp.key_name
+    pa, pa_uncertainty, pv, pv_uncertainty, array_s, array_s_uncertainty = [], [], [] ,[], [], []
+    for j in range(len(exp.key)):
+        na, nv = 0, 0
+        no_defect_success = 0
+        for i in range(0,exp.reps):
+            atom_pos_success = 0
+            extra_atom = 0
+            pic2 = ppics[num_pics*i + num_pics*j*exp.reps + 1]
+            for m in range(len(masks)):
+                if pic2[m]==1:
+                    if target[m]:
+                        atom_pos_success += 1
+                    else:
+                        extra_atom += 1
+
+            if (atom_pos_success == np.sum(target) and extra_atom == 0):
+                no_defect_success += 1
+            na += atom_pos_success
+            nv += extra_atom
+
+        pa_el = na/np.sum(target)/exp.reps
+        pv_el = nv/np.sum(target)/exp.reps
+        array_s_el = no_defect_success/exp.reps
+
+        pa.append(pa_el)
+        pv.append(pv_el)
+        array_s.append(array_s_el)
+
+        pa_uncertainty.append(np.sqrt(pa_el*(1-pa_el)/np.sum(target)/exp.reps))
+        pv_uncertainty.append(np.sqrt(pv_el*(1-pv_el)/np.sum(target)/exp.reps))
+        array_s_uncertainty.append(np.sqrt(array_s_el*(1-array_s_el)/exp.reps))
+
+    pa_sorted = np.array(pa)[np.argsort(key)]
+    pv_sorted = np.array(pv)[np.argsort(key)]
+    array_s_sorted = np.array(array_s)[np.argsort(key)]
+    pa_sorted_uncertainty = np.array(pa_uncertainty)[np.argsort(key)]
+    pv_sorted_uncertainty = np.array(pv_uncertainty)[np.argsort(key)]
+    array_s_sorted_uncertainty = np.array(array_s_uncertainty)[np.argsort(key)]
+    key_sorted = np.sort(key)
+
+    if 0 in plot:
+        plt.errorbar(key_sorted, pa_sorted, yerr=pa_sorted_uncertainty, c='k', linestyle=':', marker='o', alpha=0.7, label='single atom')
+    if 1 in plot:
+        plt.errorbar(key_sorted, pv_sorted, yerr=pv_sorted_uncertainty, c='gray', linestyle=':', marker='o', alpha=0.7, label='extra atom')
+    if 2 in plot:
+        plt.errorbar(key_sorted, array_s_sorted, yerr=array_s_sorted_uncertainty, c='r', linestyle=':', marker='o', alpha=0.7, label='defect-free array')
+    plt.xlabel(exp.key_name)
+    plt.ylabel('rearrange success prob')
+    plt.legend(bbox_to_anchor=(1,1))
+    if fullscale:
+        plt.ylim(0,1)
+    plt.title(str(exp.data_addr) + "\data_" + str(run) + ".h5")
+    if fitFunc1:
+        popt,pcov = curve_fit(fitFunc1, key_sorted, pa_sorted, sigma=pa_sorted_uncertainty, p0=pguess1)
+        x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+        y = fitFunc1(x, *popt)
+        plt.plot(x, y, 'k-')
+        print('fit:', fitFunc1)
+        print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+    if fitFunc2:
+        popt,pcov = curve_fit(fitFunc2, key_sorted, array_s_sorted, sigma=array_s_sorted_uncertainty, p0=pguess2)
+        x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+        y = fitFunc2(x, *popt)
+        plt.plot(x, y, 'k-')
+        print('fit:', fitFunc2)
+        print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+    print('single atom rearrange prob: %.3f +- %.3f' %(np.mean(pa_sorted), np.std(pa_sorted)/np.sqrt(len(pa_sorted))));
+    print('extra atom prob: %.3f +- %.3f' %(np.mean(pv_sorted), np.std(pv_sorted)/np.sqrt(len(pv_sorted))));
+    print('defect-free array prob: %.3f +- %.3f' %(np.mean(array_s_sorted), np.std(array_s_sorted)/np.sqrt(len(array_s_sorted))));
+    return key_sorted, pa_sorted, pv_sorted, array_s_sorted, pa_sorted_uncertainty, pv_sorted_uncertainty, array_s_sorted_uncertainty
+
+
+def DoublonLoadRate(exp, run, masks, target, fitFunc1=None, fitFunc2=None, pguess1=None, pguess2=None, fullscale=True, plot=[0,1,2]):
+    file = h5.File('Raw Data/data_'+str(run)+'.h5', 'r')
+    ppics = arr(file['Andor']['Processed-Pictures'])
+    reps = exp.reps
+    key = exp.key
+    key_name = exp.key_name
+    pa, pa_uncertainty, pv, pv_uncertainty, array_s, array_s_uncertainty = [], [], [] ,[], [], []
+    for j in range(len(exp.key)):
+        na, nv = 0, 0
+        doublon_num = 0
+        for i in range(0,exp.reps):
+            atom_pos_success = 0
+            pic2 = ppics[2*i + 2*j*exp.reps + 1]
+            for m in range(len(masks)):
+                if pic2[m]==1:
+                    if target[m]:
+                        atom_pos_success += 1
+
+
+            if (atom_pos_success == np.sum(target) and extra_atom == 0):
+                no_defect_success += 1
+            na += atom_pos_success
+            nv += extra_atom
+
+        pa_el = na/np.sum(target)/exp.reps
+        pv_el = nv/np.sum(target)/exp.reps
+        array_s_el = no_defect_success/exp.reps
+
+        pa.append(pa_el)
+        pv.append(pv_el)
+        array_s.append(array_s_el)
+
+        pa_uncertainty.append(np.sqrt(pa_el*(1-pa_el)/np.sum(target)/exp.reps))
+        pv_uncertainty.append(np.sqrt(pv_el*(1-pv_el)/np.sum(target)/exp.reps))
+        array_s_uncertainty.append(np.sqrt(array_s_el*(1-array_s_el)/exp.reps))
+
+    pa_sorted = np.array(pa)[np.argsort(key)]
+    pv_sorted = np.array(pv)[np.argsort(key)]
+    array_s_sorted = np.array(array_s)[np.argsort(key)]
+    pa_sorted_uncertainty = np.array(pa_uncertainty)[np.argsort(key)]
+    pv_sorted_uncertainty = np.array(pv_uncertainty)[np.argsort(key)]
+    array_s_sorted_uncertainty = np.array(array_s_uncertainty)[np.argsort(key)]
+    key_sorted = np.sort(key)
+
+    if 0 in plot:
+        plt.errorbar(key_sorted, pa_sorted, yerr=pa_sorted_uncertainty, c='k', linestyle=':', marker='o', alpha=0.7, label='single atom')
+    if 1 in plot:
+        plt.errorbar(key_sorted, pv_sorted, yerr=pv_sorted_uncertainty, c='gray', linestyle=':', marker='o', alpha=0.7, label='extra atom')
+    if 2 in plot:
+        plt.errorbar(key_sorted, array_s_sorted, yerr=array_s_sorted_uncertainty, c='r', linestyle=':', marker='o', alpha=0.7, label='defect-free array')
+    plt.xlabel(exp.key_name)
+    plt.ylabel('rearrange success prob')
+    plt.legend(bbox_to_anchor=(1,1))
+    if fullscale:
+        plt.ylim(0,1)
+    plt.title(str(exp.data_addr) + "\data_" + str(run) + ".h5")
+    if fitFunc1:
+        popt,pcov = curve_fit(fitFunc1, key_sorted, pa_sorted, sigma=pa_sorted_uncertainty, p0=pguess1)
+        x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+        y = fitFunc1(x, *popt)
+        plt.plot(x, y, 'k-')
+        print('fit:', fitFunc1)
+        print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+    if fitFunc2:
+        popt,pcov = curve_fit(fitFunc2, key_sorted, array_s_sorted, sigma=array_s_sorted_uncertainty, p0=pguess2)
+        x = np.linspace(key_sorted[0], key_sorted[-1], 200)
+        y = fitFunc2(x, *popt)
+        plt.plot(x, y, 'k-')
+        print('fit:', fitFunc2)
+        print('fit params:', popt, '+-', np.sqrt(np.diag(pcov)))
+    print('single atom rearrange prob: %.3f +- %.3f' %(np.mean(pa_sorted), np.std(pa_sorted)/np.sqrt(len(pa_sorted))));
+    print('extra atom prob: %.3f +- %.3f' %(np.mean(pv_sorted), np.std(pv_sorted)/np.sqrt(len(pv_sorted))));
+    print('defect-free array prob: %.3f +- %.3f' %(np.mean(array_s_sorted), np.std(array_s_sorted)/np.sqrt(len(array_s_sorted))));
+    return key_sorted, pa_sorted, pv_sorted, array_s_sorted, pa_sorted_uncertainty, pv_sorted_uncertainty, array_s_sorted_uncertainty

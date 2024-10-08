@@ -218,6 +218,21 @@ def emccd_hist(x, alpha, x0, scale, A, a, x1, sig):
 def emccd_hist_skew(x, alpha, x0, scale, A, a, x1, sig, beta):
     return emccd_bkg(x, alpha, x0, scale, A) + gaussian_skew(x, a, x1, sig, beta, 0)
 
+def qcmos_hist_log(x,a,a_bkg,x0,sig0,alpha,b,x1,sig1,beta):
+    return np.log(qcmos_hist_bkg(x,np.abs(a),np.abs(a_bkg),x0,sig0,alpha) + qcmos_hist_atoms(x,np.abs(b),x1,sig1,beta))
+
+def qcmos_hist(x,a,a_bkg,x0,sig0,alpha,b,x1,sig1,beta):
+    return qcmos_hist_bkg(x,np.abs(a),np.abs(a_bkg),x0,sig0,alpha) + qcmos_hist_atoms(x,np.abs(b),x1,sig1,beta)
+
+def qcmos_hist_bkg(x,a,a_bkg,x0,sig,alpha):
+    return gaussian_skew(x,np.abs(a), x0, sig, alpha, 0) + gaussian(x,np.abs(a_bkg),199.2848,3.53917,0)
+
+def qcmos_hist_atoms(x,b,x1,sig,beta):
+    return gaussian_skew(x, np.abs(b), x1, sig, beta, 0)
+
+def gaussian_exp(x,amp,A,x0g,sigma):
+    return A/2*np.exp((A/2)*(2*x0g+A*sigma**2-2*x))*(1-erf((x0g+A*sigma**2-x)/(np.sqrt(2)*sigma)))
+
 def erfc(x, amp, x0, sigma):
     if x < x0:
         return amp * np.sqrt(np.pi*(sigma**2)/2) * (1 + erf((x-x0)/np.sqrt(2)/np.abs(sigma)))
@@ -231,11 +246,17 @@ def expatomloss(x,a,b,Amp):
     """Fit atom loss from the trap, using heuristic function. Param: [a, b, Amp]"""
     return (Amp*np.exp(-a*x-b*x*x))
 
+def fourgaussian(x, x1, x2, x3, x4, a1, a2, a3, a4, s1, s2, s3, s4, y0):
+    return gaussian(x, a1, x1, s1, y0) +gaussian(x, a2, x2, s2, y0)+gaussian(x, a3, x3, s3, y0)+gaussian(x, a4, x4, s4, y0) - 3*y0
+
 def fivelor(x, a0, a1, a2, a3, a4, kc, ks, kss, x0, dx, dxx, y0):
     return y0 + lor(x, a0, kss, x0-dxx)+ lor(x, a1, ks, x0-dx)+lor(x, a2, kc, x0) + lor(x, a3, ks, x0+dx) +lor(x, a4, kss, x0+dxx)
 
 def gaussian(x, a, x0, sig, y0):
     return a * np.exp( -((x - x0)**2) / (2*(sig**2)) ) + y0
+
+def poisson_cont(x,C,ld,x0):
+    return np.abs(C)*np.exp(-ld)*ld**(x-x0)/scipy.special.gamma(x-x0)
 
 def gaussian_skew(x, a, x0, sig, alpha, y0):
     return a*np.sqrt(2*np.pi) * (1/np.sqrt(2*np.pi) * np.exp( -((x - x0)**2) / (2*(sig**2)) )*(1+erf(alpha*(x-x0)/sig/np.sqrt(2)))) + y0
@@ -618,3 +639,6 @@ def waistFit(kvals,dat,lam):
 #     print('Predicted params (z0, zr, w0):', pred_params)
 #     print('Residual, RMS(obs - pred):', np.sqrt(np.mean((dat - zpred)**2)))
     return zpred, pred_params, perr
+
+def vline(x, x0, a, b):
+    return a*abs(x-x0) + b

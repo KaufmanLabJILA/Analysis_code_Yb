@@ -6,44 +6,164 @@ from .mathutil import *
 # from .plotutil import *
 from .imagutil import *
 import time
+from .analysis import get_threshold_data
 
 import klib.experiment_constants as exc
 
 # from .mako import *
 # from .adam import *
 
-def fit_histogram(x, y, threshold_guess, pguess=[]):
+def fit_histogram(x, y, threshold_guess, pguess=[], option='emccd'):
     idx_guess = np.abs(x - threshold_guess).argmin()
     if pguess:
         p0=pguess
     else:
         p0 = np.array([ 1.1, 4900,  0.015, np.max(y[:idx_guess]),
                            np.max(y[idx_guess:]), 5900, 400, 1.8])
+        
+    if option != 'cmos':
 
-    popt, pcov = curve_fit(emccd_hist_skew, x, y, p0=p0)
 
-    mistake_arr = []
-    idx_voidpeak = np.argmax(y[:idx_guess])
-    idx_atompeak = np.argmax(y[idx_guess:])
-    threshold_arr = arr(np.arange(x[idx_voidpeak], x[idx_atompeak+idx_guess]), dtype=int)
+        popt, pcov = curve_fit(emccd_hist_skew, x, y, p0=p0)
 
-    xfit = arr(np.arange(threshold_arr[0]-200, threshold_arr[-1]+1500), dtype=int)
-    atom_curve = gaussian_skew(xfit, popt[4], popt[5], popt[6], popt[7], 0)
-    void_curve = emccd_bkg(xfit, popt[0], popt[1], popt[2], popt[3])
+        mistake_arr = []
+        idx_voidpeak = np.argmax(y[:idx_guess])
+        idx_atompeak = np.argmax(y[idx_guess:])
+        threshold_arr = arr(np.arange(x[idx_voidpeak], x[idx_atompeak+idx_guess]), dtype=int)
 
-    for t in threshold_arr:
-        tidx = t - xfit[0]
-        av_mistake = np.sum(atom_curve[:tidx+1])
-        va_mistake = np.sum(void_curve[tidx:])
-        mistake_arr.append([va_mistake, av_mistake])
+        xfit = arr(np.arange(threshold_arr[0]-200, threshold_arr[-1]+1500), dtype=int)
+        atom_curve = gaussian_skew(xfit, popt[4], popt[5], popt[6], popt[7], 0)
+        void_curve = emccd_bkg(xfit, popt[0], popt[1], popt[2], popt[3])
 
-    tot_area_a = np.sum(atom_curve)
-    tot_area_v = np.sum(void_curve)
+        for t in threshold_arr:
+            tidx = t - xfit[0]
+            av_mistake = np.sum(atom_curve[:tidx+1])
+            va_mistake = np.sum(void_curve[tidx:])
+            mistake_arr.append([va_mistake, av_mistake])
 
-    threshold_idx = np.argmin(np.sum(mistake_arr, axis=1))
-    threshold = threshold_arr[threshold_idx]
+        tot_area_a = np.sum(atom_curve)
+        tot_area_v = np.sum(void_curve)
 
-    va_mistake, av_mistake = mistake_arr[threshold_idx]
+        threshold_idx = np.argmin(np.sum(mistake_arr, axis=1))
+        threshold = threshold_arr[threshold_idx]
+
+        va_mistake, av_mistake = mistake_arr[threshold_idx]
+    
+    if option == 'cmos':
+
+
+        popt, pcov = curve_fit(qcmos_hist_log, x, np.log(y+0.1), p0=p0)
+
+        mistake_arr = []
+        idx_voidpeak = np.argmax(y[:idx_guess])
+        idx_atompeak = np.argmax(y[idx_guess:])
+        threshold_arr = arr(np.arange(x[idx_voidpeak], x[idx_atompeak+idx_guess]), dtype=int)
+
+
+        xfit = arr(np.arange(threshold_arr[0]-200, threshold_arr[-1]+1500), dtype=int)
+        atom_curve = qcmos_hist_atoms(xfit,popt[5],popt[6],popt[7],popt[8])
+        void_curve = qcmos_hist_bkg(xfit, popt[0], popt[1], popt[2], popt[3],popt[4])
+
+        for t in threshold_arr:
+            tidx = t - xfit[0]
+            av_mistake = np.sum(atom_curve[:tidx+1])
+            va_mistake = np.sum(void_curve[tidx:])
+            mistake_arr.append([va_mistake, av_mistake])
+
+        tot_area_a = np.sum(atom_curve)
+        tot_area_v = np.sum(void_curve)
+
+        threshold_idx = np.argmin(np.sum(mistake_arr, axis=1))
+        threshold = threshold_arr[threshold_idx]
+
+        va_mistake, av_mistake = mistake_arr[threshold_idx]
+
+    return threshold, [va_mistake/tot_area_v, av_mistake/tot_area_a], popt, pcov, xfit
+
+
+
+def fit_histogram_benchmarking(x, y, threshold_guess, exp, run, masks, pguess=[], option='emccd', threshold_method = 'data'):
+    idx_guess = np.abs(x - threshold_guess).argmin()
+    if pguess:
+        p0=pguess
+    else:
+        p0 = np.array([ 1.1, 4900,  0.015, np.max(y[:idx_guess]),
+                           np.max(y[idx_guess:]), 5900, 400, 1.8])
+        
+    if option != 'cmos':
+
+
+        popt, pcov = curve_fit(emccd_hist_skew, x, y, p0=p0)
+
+        mistake_arr = []
+        idx_voidpeak = np.argmax(y[:idx_guess])
+        idx_atompeak = np.argmax(y[idx_guess:])
+        threshold_arr = arr(np.arange(x[idx_voidpeak], x[idx_atompeak+idx_guess]), dtype=int)
+
+        xfit = arr(np.arange(threshold_arr[0]-200, threshold_arr[-1]+1500), dtype=int)
+        atom_curve = gaussian_skew(xfit, popt[4], popt[5], popt[6], popt[7], 0)
+        void_curve = emccd_bkg(xfit, popt[0], popt[1], popt[2], popt[3])
+
+        for t in threshold_arr:
+            tidx = t - xfit[0]
+            av_mistake = np.sum(atom_curve[:tidx+1])
+            va_mistake = np.sum(void_curve[tidx:])
+            mistake_arr.append([va_mistake, av_mistake])
+
+        tot_area_a = np.sum(atom_curve)
+        tot_area_v = np.sum(void_curve)
+
+        threshold_idx = np.argmin(np.sum(mistake_arr, axis=1))
+        threshold = threshold_arr[threshold_idx]
+
+        va_mistake, av_mistake = mistake_arr[threshold_idx]
+    
+    if option == 'cmos':
+
+
+        popt, pcov = curve_fit(qcmos_hist_log, x, np.log(y+0.1), p0=p0)
+
+        mistake_arr = []
+        mistake_arr_fit = []
+        idx_voidpeak = np.argmax(y[:idx_guess])
+        idx_atompeak = np.argmax(y[idx_guess:])
+        threshold_arr = arr(np.arange(x[idx_voidpeak], x[idx_atompeak+idx_guess]), dtype=int)
+
+
+        xfit = arr(np.arange(threshold_arr[0]-200, threshold_arr[-1]+1500), dtype=int)
+        atom_curve = qcmos_hist_atoms(xfit,popt[5],popt[6],popt[7],popt[8])
+        void_curve = qcmos_hist_bkg(xfit, popt[0], popt[1], popt[2], popt[3],popt[4])
+
+        # if threshold_method == 'nodata':
+        #     for t in threshold_arr:
+        #         tidx = t - xfit[0]
+        #         av_mistake = np.sum(atom_curve[:tidx+1])
+        #         va_mistake = np.sum(void_curve[tidx:])
+        #         mistake_arr.append([va_mistake, av_mistake])
+
+        #     tot_area_a = np.sum(atom_curve)
+        #     tot_area_v = np.sum(void_curve)
+
+        #     threshold_idx = np.argmin(np.sum(mistake_arr, axis=1))
+        #     threshold = threshold_arr[threshold_idx]
+
+        #     va_mistake, av_mistake = mistake_arr[threshold_idx]
+        # if threshold_method == 'data':
+        for t in threshold_arr:
+            tidx = t - xfit[0]
+            av_mistake_fit = np.sum(atom_curve[:tidx+1])
+            va_mistake_fit = np.sum(void_curve[tidx:])
+            mistake_arr_fit.append([va_mistake_fit, av_mistake_fit])
+            av_mistake, va_mistake = get_threshold_data(exp, run, masks, t)
+            mistake_arr.append([va_mistake, av_mistake])
+
+        tot_area_a = np.sum(atom_curve)
+        tot_area_v = np.sum(void_curve)
+
+        threshold_idx = np.argmin(np.sum(mistake_arr, axis=1))
+        threshold = threshold_arr[threshold_idx]
+        print(threshold_idx)
+        va_mistake, av_mistake = mistake_arr_fit[threshold_idx]
 
     return threshold, [va_mistake/tot_area_v, av_mistake/tot_area_a], popt, pcov, xfit
 
@@ -129,6 +249,190 @@ def analyze_histogram(exp, run, masks, threshold_guess = 5300, bin_width = 10, k
     print('av fitted infidelity: ',[format_string.format(number*100) for i,number in enumerate(arr(inf_all)[:,1])], 'percent')
 
     return threshold_all, hist_xdata_all, hist_all, popt_all, pcov_all, inf_all, xfit_all
+
+
+def analyze_histogram_cmos(exp, run, masks, threshold_guess = 270, bin_width = 10, keep_img = [0,1], crop = [0,None,0,None], single_threshold=True, pguess=None):
+
+    hist_xdata_all = []
+    hist_all = []
+    threshold_all = []
+    popt_all = []
+    pcov_all = []
+    inf_all = []
+    xfit_all = []
+
+    num_img = int(exp.pics.shape[0]/exp.reps/len(exp.key))
+
+    # analyze each image seperately
+    for num in keep_img:
+
+        #find counts from an image
+        sig = exp.pics[num::num_img, crop[0]:crop[1], crop[2]:crop[3]]
+        cs = np.array(list(map(lambda image: list(map(lambda mask:np.sum(mask*image),masks)),sig))).flatten()
+
+        # sort counts into histogram
+        hist, bin_edges = np.histogram(cs, bins=np.arange(np.min(cs)-bin_width/2, np.max(cs)+bin_width/2, bin_width))
+        hist_xdata = bin_edges[:-1]
+
+        hist_xdata_all.append(hist_xdata)
+        hist_all.append(hist)
+
+        if num == 0:
+            try:
+                threshold, inf, popt, pcov, xfit = fit_histogram(hist_xdata, hist, threshold_guess, pguess=pguess, option='cmos')
+                if single_threshold==True:
+                    threshold0 = threshold
+                    popt0 = popt
+                    pcov0 = pcov
+                    inf0 = inf
+                    xfit0 = xfit
+            except:
+                popt = pguess
+                print("Optimal parameters not found!")
+                threshold = threshold_guess
+                pcov = np.sqrt(popt)
+                inf = 0
+                xfit = 0
+
+        else:
+            try:
+                if single_threshold==True:
+                    threshold = threshold0
+                    popt = popt0
+                    pcov = pcov0
+                    inf = inf0
+                    xfit = xfit0
+                else:
+                    threshold, inf, popt, pcov, xfit = fit_histogram(hist_xdata, hist, threshold_guess, pguess=pguess, option='cmos')
+            except:
+                popt = pguess
+                print("Optimal parameters not found!")
+                threshold = threshold_guess
+                pcov = np.sqrt(popt)
+                inf = 0
+                xfit = 0
+
+        inf_all.append(inf)
+        popt_all.append(popt)
+        pcov_all.append(pcov)
+        threshold_all.append(threshold)
+        xfit_all.append(xfit)
+
+    fig, ax = plt.subplots(figsize=[6,4])
+    alphaarr = np.linspace(1.0,0.5, num_img)
+    Ncl = 5
+    c_ls = plt.get_cmap('rainbow', Ncl)
+    for num, n in enumerate(keep_img):
+        ax.plot(hist_xdata_all[num], hist_all[num], alpha=alphaarr[num], drawstyle='steps-post', color='k', zorder = 0)
+        ax.plot([threshold_all[num], threshold_all[num]], [np.min(hist_all[num]), np.max(hist_all[num])], linestyle='--', color=c_ls(n/Ncl), label=n, zorder = 0)
+        ax.plot(hist_xdata_all[num], qcmos_hist(hist_xdata_all[num], *popt_all[num]), linewidth=2, color=c_ls(n/Ncl))
+
+    ax.set_xlabel('Counts collected')
+    ax.set_ylabel('Events')
+    ax.set_yscale('log')
+    ax.set_ylim(0.7, )
+    plt.legend()
+    ax.set_title(str(exp.data_addr) + "data_" + str(run) + ".h5")
+    plt.show()
+
+    format_string = "{:.3f}"
+
+    print('bkg peak position: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,2])])
+    print('bkg peak width param: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,3])])
+    print('atom peak position: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,6])])
+    print('atom peak width: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,7])])
+    print('bkg peak amplitude: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,0])])
+    print('atom peak amplitude: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,5])])
+    print('thresholds: ',[format_string.format(number) for number in [t for i,t in enumerate(threshold_all)]])
+    print('va fitted infidelity: ',[format_string.format(number*100) for i,number in enumerate(arr(inf_all)[:,0])], 'percent')
+    print('av fitted infidelity: ',[format_string.format(number*100) for i,number in enumerate(arr(inf_all)[:,1])], 'percent')
+
+    return threshold_all, hist_xdata_all, hist_all, popt_all, pcov_all, inf_all, xfit_all
+
+
+
+def analyze_histogram_cmos_data(exp, run, masks, threshold_guess = 270, bin_width = 10, keep_img = [0,1], crop = [0,None,0,None], single_threshold=True, pguess=None, threshold_method='data'):
+
+    hist_xdata_all = []
+    hist_all = []
+    threshold_all = []
+    popt_all = []
+    pcov_all = []
+    inf_all = []
+    xfit_all = []
+
+    num_img = int(exp.pics.shape[0]/exp.reps/len(exp.key))
+
+    # analyze each image seperately
+    for num in keep_img:
+
+        #find counts from an image
+        sig = exp.pics[num::num_img, crop[0]:crop[1], crop[2]:crop[3]]
+        cs = np.array(list(map(lambda image: list(map(lambda mask:np.sum(mask*image),masks)),sig))).flatten()
+
+        # sort counts into histogram
+        hist, bin_edges = np.histogram(cs, bins=np.arange(np.min(cs)-bin_width/2, np.max(cs)+bin_width/2, bin_width))
+        hist_xdata = bin_edges[:-1]
+
+        hist_xdata_all.append(hist_xdata)
+        hist_all.append(hist)
+
+        if num == 0:
+            threshold, inf, popt, pcov, xfit = fit_histogram_benchmarking(hist_xdata, hist, threshold_guess, exp, run, masks, pguess=pguess, option='cmos',threshold_method='data')
+            if single_threshold==True:
+                threshold0 = threshold
+                popt0 = popt
+                pcov0 = pcov
+                inf0 = inf
+                xfit0 = xfit
+
+        else:
+            if single_threshold==True:
+                threshold = threshold0
+                popt = popt0
+                pcov = pcov0
+                inf = inf0
+                xfit = xfit0
+            else:
+                threshold, inf, popt, pcov, xfit = fit_histogram_benchmarking(hist_xdata, hist, threshold_guess, exp, run, masks,pguess=pguess, option='cmos', threshold_method='data')
+
+        inf_all.append(inf)
+        popt_all.append(popt)
+        pcov_all.append(pcov)
+        threshold_all.append(threshold)
+        xfit_all.append(xfit)
+
+    fig, ax = plt.subplots(figsize=[6,4])
+    alphaarr = np.linspace(1.0,0.5, num_img)
+    Ncl = 5
+    c_ls = plt.get_cmap('rainbow', Ncl)
+    for num, n in enumerate(keep_img):
+        ax.plot(hist_xdata_all[num], hist_all[num], alpha=alphaarr[num], drawstyle='steps-post', color='k', zorder = 0)
+        ax.plot([threshold_all[num], threshold_all[num]], [np.min(hist_all[num]), np.max(hist_all[num])], linestyle='--', color=c_ls(n/Ncl), label=n, zorder = 0)
+        ax.plot(hist_xdata_all[num], qcmos_hist(hist_xdata_all[num], *popt_all[num]), linewidth=2, color=c_ls(n/Ncl))
+
+    ax.set_xlabel('Counts collected')
+    ax.set_ylabel('Events')
+    ax.set_yscale('log')
+    ax.set_ylim(0.7, )
+    plt.legend()
+    ax.set_title(str(exp.data_addr) + "data_" + str(run) + ".h5")
+    plt.show()
+
+    format_string = "{:.3f}"
+
+    print('bkg peak position: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,2])])
+    print('bkg peak width param: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,3])])
+    print('atom peak position: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,6])])
+    print('atom peak width: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,7])])
+    print('bkg peak amplitude: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,0])])
+    print('atom peak amplitude: ',[format_string.format(number) for number in np.abs(np.array(popt_all)[:,5])])
+    print('thresholds: ',[format_string.format(number) for number in [t for i,t in enumerate(threshold_all)]])
+    print('va fitted infidelity: ',[format_string.format(number*100) for i,number in enumerate(arr(inf_all)[:,0])], 'percent')
+    print('av fitted infidelity: ',[format_string.format(number*100) for i,number in enumerate(arr(inf_all)[:,1])], 'percent')
+
+    return threshold_all, hist_xdata_all, hist_all, popt_all, pcov_all, inf_all, xfit_all
+
 
 def get_events(exp, run, masks, threshold, crop=[0,None,0,None], keep_img=[0,1], skipFirst=True,postselection=False,parity=True,order='1'):
     sitenum = len(masks) #this number change when this is for rydberg

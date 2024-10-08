@@ -23,6 +23,9 @@ from pathlib import Path
 import re
 import math
 
+from scipy.stats import poisson
+import scipy.special
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -56,16 +59,19 @@ from colorama import Fore, Style
 
 
 # for expPlotter
-import plotly.graph_objects as go
-import plotly.express as px
-from plotly import subplots 
-import plotly.colors as plotlycolors
+##test to comment out 240313
+# import plotly.graph_objects as go
+# import plotly.express as px
+# from plotly import subplots 
+# import plotly.colors as plotlycolors
+#--
 from jupyter_dash import JupyterDash
 from dash import Dash, dcc, html, Input, Output, State
 from dash.exceptions import PreventUpdate
 import copy
 import socket
 
-cols = plotlycolors.DEFAULT_PLOTLY_COLORS
+##test to comment out 240313
+# cols = plotlycolors.DEFAULT_PLOTLY_COLORS
 
 # from astropy.modeling.models import Voigt1D
